@@ -49,7 +49,7 @@ $ npm run start
 자바스크립트로 된 스타터 프로젝트를 설치하고 싶다면, 위 명령어에서 클론 부분을 아래와 같이 바꿔주시면 됩니다.
 
 ```sh
-$ git clone https://github.com/nestjs/typescript-starter.git project
+$ git clone https://github.com/nestjs/javascript-starter.git project
 ```
 
 npm이나 yarn을 통해 주요 파일들을 설치하여 바닥부터 수동으로 프로젝트를 만들 수도 있습니다. 물론, 이 경우엔 프로젝트의 기본 파일들을 직접 생성하셔야 합니다.
