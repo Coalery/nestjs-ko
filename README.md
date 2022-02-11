@@ -41,6 +41,7 @@ $ npm run start
 ```
 
 > **팁**
+> 
 > 깃 히스토리 없이 리포지토리를 클론하고 싶다면, [degit](https://github.com/Rich-Harris/degit)을 사용해보세요.
 
 브라우저를 열고, [http://localhost:3000/](http://localhost:3000/)로 가보세요.
