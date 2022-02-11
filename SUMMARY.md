@@ -1,8 +1,8 @@
 # Table of contents
 
-## introduction
+## INTRODUCTION
 
-* [INTRODUCTION](README.md)
+* [Introduction](introduction/introduction.md)
 
 ## OVERVIEW
 
