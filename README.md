@@ -4,7 +4,7 @@ description: "원문 : https://docs.nestjs.com/"
 
 # INTRODUCTION
 
-## Introduction
+### 소개
 
 Nest(NestJS)는 효율적이고 확장 가능한 [Node.js](https://nodejs.org/en/) 서버 측 애플리케이션을 구축하기 위한 프레임워크입니다. 프로그레시브 자바스크립트를 사용하고, [타입스크립트](https://www.typescriptlang.org/)로 만들어졌으며 이를 완전히 지원합니다. (아직 순수 자바스크립트로 개발할 수는 있습니다.) Nest는 OOP(Object Oriented Programming), FP(Functional Programming), FRP(Functional Reactive Programming)의 요소들이 섞여있는 프레임워크입니다.
 
@@ -12,4 +12,8 @@ Nest는 기본적으로 강력한 HTTP 서버 프레임워크인 [Express](https
 
 Nest는 위 두 프레임워크에 대한 추상화 층을 제공하지만, 이들의 API들도 직접적으로 개발자에게 노출시킵니다. 이는 개발자가 자유롭게 많은 모듈을 사용할 수 있게 합니다.
 
-## Philosophy
+### 철학
+
+최근 몇 년간, 자바스크립트는 Node.js 덕분에 프론트엔드와 백엔드 어플리케이션의 공통어 역할(원문: (lingua franca)[https://en.wikipedia.org/wiki/Lingua_franca])을 하게 되었습니다. 이는 [Angular](https://angular.io/), [React](https://github.com/facebook/react), [Vue](https://github.com/vuejs/vue) 와 같이 멋진 프론트엔드 프로젝트가 떠오르게 하였습니다. 프론트엔드 개발자들은 이러한 프로젝트들로 인해 생산성이 향상되었고, 빠르고 테스트 가능하며 확장 가능한 프론트엔드 어플리케이션을 만들어낼 수 있었습니다. 이렇게 많은 멋진 라이브러리들, 사람들, 도구들이 나왔지만, 아무도 아키텍처의 주요 문제를 효율적으로 풀지는 못했습니다.
+
+Nest는 개발자들과 팀들이 높은 테스트 가능성, 확장 가능성을 가지며 느슨하게 결합되고 쉽게 유지 보수가 가능한 어플리케이션을 만들 수 있는 아키텍처를 제공합니다. 이 아키텍처는 Angular에서 크게 영감을 받았습니다.
