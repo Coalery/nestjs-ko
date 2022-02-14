@@ -51,3 +51,46 @@ export class CatsController {
 > 
 > 핸들러에서 `@Res()`나 `@Next()`를 사용하면, Nest는 당신이 library-specific 옵션을 선택했음을 감지합니다. 만약 위의 두 옵션을 모두 사용할 경우에는, 해당 라우트에 대해 Standard 옵션은 자동으로 꺼지며 예상대로 동작하지 않게 됩니다. 만약 쿠키나 헤더만 설정하고 다른 것은 프레임워크에게 맡기고 싶을 때와 같이, 두 옵션을 모두 써야할 때는 `@Res({ passthrough: true })`처럼 데코레이터의 `passthrough` 옵션을 `true`로 설정해야 합니다.
 
+### Request 객체
+
+핸들러는 가끔 클라이언트의 요청에 대한 세부 사항에 접근해야할 때가 있습니다. Nest에서는 기반 플랫폼(기본적으로는 Express)의 [request 객체](https://expressjs.com/en/api.html#req)에 접근할 수 있습니다. 주입 받을 핸들러의 시그니처에 `@Req()` 데코레이터를 넣으면, Nest가 request 객체를 주입해주게 됩니다.
+
+```ts
+// cats.controller.ts
+import { Controller, Get, Req } from '@nestjs/common';
+import { Request } from 'express';
+
+@Controller('cats')
+export class CatsController {
+  @Get()
+  findAll(@Req() request: Request): string {
+    return 'This action returns all cats';
+  }
+}
+```
+
+> **팁**
+> 
+> 위의 `request: Request` 파라미터처럼 `express`의 타입 정보를 가져오려면, `@types/express` 패키지를 설치해주세요.
+
+Request 객체는 HTTP 요청을 나타내고, 쿼리 문자열이나 파라미터, HTTP 헤더, body 등을 갖습니다. (더 알아보고 싶다면 [여기](https://expressjs.com/en/api.html#req)를 참고하세요.) 대부분의 경우, 해당 속성들을 직접 가져올 필요는 없습니다. 대신, `@Body()`나 `@Query()` 등 각각 전용 데코레이터가 있고, 이를 사용하면 됩니다. 아래는 Nest에서 제공하는 데코레이터와 특정 플랫폼에 대한 객체들을 연결한 표입니다.
+
+|데코레이터|객체|
+|:---|:---|
+|`@Request()`, `@Req()`|`req`|
+|`@Response()`, `@Res()` <strong style='color: red'>*</strong>|`res`|
+|`@Next()`|`next`|
+|`@Session()`|`req.session`|
+|`@Param(key?: string)`|`req.params` / `req.params[key]`|
+|`@Body(key?: string)`|`req.body` / `req.body[key]`|
+|`@Query(key?: string)`|`req.query` / `req.query[key]`|
+|`@Headers(name?: string)`|`req.headers` / `req.headers[name]`|
+|`@Ip()`|`req.ip`|
+|`@HostParam()`|`req.hosts`|
+
+<strong style='color: red'>*</strong> Express나 Fastify 등의 기반 HTTP 플랫폼 간 타입 호환성을 위해, Nest는 `@Res()`와 `@Response()` 데코레이터를 제공합니다. `@Res()`는 `@Response()`의 별명일 뿐, 다른 의미는 없습니다. 둘 모두 기반 네이티브 플랫폼의 `response` 객체의 인터페이스를 직접 노출시킵니다. 이걸 사용할 땐 `@types/express`처럼 기반 라이브러리의 타입도 임포트하는게 좋습니다. 어쨌든, `@Res()`나 `@Response()`를 메서드 핸들러에 사용하는 경우, Nest는 해당 핸들러를 **Library-specific 모드**로 인식합니다. 이 경우, 해당 핸들러의 응답을 개발자가 직접 처리해야 합니다. 즉, `res.json(...)`이나 `res.send(...)` 등의 방법으로 응답 객체를 호출하여 직접 응답을 만들어내야 하며, 하지 않으면 HTTP 서버가 중단됩니다.
+
+> **팁**
+> 
+> 자신만의 데코레이터를 만들어보고 싶다면, [여기](https://docs.nestjs.com/custom-decorators)를 참고하세요.
+
