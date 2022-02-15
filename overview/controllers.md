@@ -54,7 +54,7 @@ export class CatsController {
 
 ### Request 객체
 
-핸들러는 가끔 클라이언트의 요청에 대한 세부 사항에 접근해야할 때가 있습니다. Nest에서는 기반 플랫폼(기본적으로는 Express)의 [request 객체](https://expressjs.com/en/api.html#req)에 접근할 수 있습니다. 주입 받을 핸들러의 시그니처에 `@Req()` 데코레이터를 넣으면, Nest가 request 객체를 주입해주게 됩니다.
+핸들러는 가끔 클라이언트의 **요청**에 대한 세부 사항에 접근해야할 때가 있습니다. Nest에서는 기반 플랫폼(기본적으로는 Express)의 [request 객체](https://expressjs.com/en/api.html#req)에 접근할 수 있습니다. 주입 받을 핸들러의 시그니처에 `@Req()` 데코레이터를 넣으면, Nest가 request 객체를 주입해주게 됩니다.
 
 ```ts
 // cats.controller.ts
@@ -134,7 +134,7 @@ findAll() {
 
 ### 상태 코드
 
-위에서 말했던 것처럼, POST 요청이 201인 것을 제외하면 응답의 상태 코드는 기본적으로 200입니다. 응답의 상태 코드를 바꾸려면 핸들러에 `@HttpCode(...)`를 붙이면 됩니다.
+위에서 말했던 것처럼, POST 요청이 **201**인 것을 제외하면 모든 응답의 **상태 코드**는 기본적으로 **200**입니다. 응답의 상태 코드를 바꾸려면 핸들러에 `@HttpCode(...)`를 붙이면 됩니다.
 
 ```ts
 @Post()
@@ -148,7 +148,7 @@ create() {
 > 
 > `HttpCode`는 `@nestjs/common` 패키지에서 임포트하세요.
 
-가끔 상태 코드가 정적이지 않고, 여러 요소에 따라 바뀌어야 할 때가 있습니다. 이 경우, `@Res()`를 통해 주입 받은 library-specific 응답 객체를 사용하시면 됩니다. 만약 오류가 발생해서 상태 코드를 바꿔야할 경우, 예외를 발생시키면 됩니다.
+가끔 상태 코드가 정적이지 않고, 여러 요소에 따라 바뀌어야 할 때가 있습니다. 이 경우, `@Res()`를 통해 주입 받은 library-specific **응답** 객체를 사용하시면 됩니다. 만약 오류가 발생해서 상태 코드를 바꿔야할 경우, 예외를 발생시키면 됩니다.
 
 ### 헤더
 
@@ -194,6 +194,61 @@ create() {
 getDocs(@Query('version') version) {
   if (version && version === '5') {
     return { url: 'https://docs.nestjs.com/v5/' };
+  }
+}
+```
+
+### 라우트 파라미터
+
+`GET /cats/1`로 아이디가 `1`인 고양이를 가져오고 싶을 때처럼 요청의 일부로 **동적인 데이터**를 가져올 필요가 있을 때, 정적인 경로로 설정된 라우트는 제대로 동작하지 않을 것입니다. 파라미터와 함께 라우트를 정의하려면, 요청 URL에서 가져올 동적 데이터가 있는 위치에 라우트 파라미터 **토큰**을 추가하면 됩니다. 아래에서, `@Get()` 데코레이터에 라우트 파라미터 토큰을 사용한 예를 보여줍니다. 이렇게 선언된 라우트 파라미터는 메서드 시그니처에 붙일 수 있는 `@Param()` 데코레이터를 통해 접근할 수 있습니다.
+
+```ts
+@Get(':id')
+findOne(@Param() params): string {
+  console.log(params.id);
+  return `This action returns a #${params.id} cat`;
+}
+```
+
+`@Param()`은 위 예시에서의 `params`처럼 메서드 파라미터에 붙여, 메서드 안에서 **라우트** 파라미터를 데코레이터를 붙인 변수의 속성으로 사용할 수 있게 합니다. 위 코드에서는, `params.id`를 참조하여 `id` 파라미터에 접근하였습니다. 데코레이터에 특정 파라미터의 토큰을 넘겨주면, 해당 이름을 가진 라우트 파라미터를 바로 참조할 수 있습니다.
+
+> **팁**
+> 
+> `Param`은 `@nestjs/common` 패키지에서 임포트하세요.
+
+```ts
+@Get(':id')
+findOne(@Param('id') id: string): string {
+  return `This action returns a #${id} cat`;
+}
+```
+
+### 서브 도메인 라우팅
+
+`@Controller()` 데코레이터에 `host` 옵션을 주면, 들어오는 요청의 HTTP host가 설정 값과 일치한 요청만 받도록 설정할 수 있습니다.
+
+```ts
+@Controller({ host: 'admin.example.com' })
+export class AdminController {
+  @Get()
+  index(): string {
+    return 'Admin page';
+  }
+}
+```
+
+> **주의**
+> 
+> **Fastify**의 중첩 라우트 지원이 부족하기 때문에, 서브 도메인 라우팅을 사용할 때는 Express 어댑터가 대신 사용됩니다.
+
+위의 라우트 파라미터와 비슷하게, `hosts` 옵션은 호스트 네임의 특정 위치에 있는 동적 갑을 가져오기 위해 토큰을 사용할 수 있습니다. 아래에서, `@Controller()` 데코레이터에 호스트 파라미터 토큰을 사용한 예를 보여줍니다. 이렇게 정의된 호스트 파라미터는 메서드 시그니처에 추가할 수 있는 `@HostParam()` 데코레이터를 통해 접근할 수 있습니다.
+
+```ts
+@Controller({ host: ':account.example.com' })
+export class AccountController {
+  @Get()
+  getInfo(@HostParam('account') account: string) {
+    return account;
   }
 }
 ```
