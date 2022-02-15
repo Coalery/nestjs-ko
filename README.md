@@ -1,6 +1,8 @@
 ## Nestjs-ko
 
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/Coalery/nestjs-ko/pulls)
+
+https://github.com/Coalery/nestjs-ko
 
 Nestjs의 공식 문서를 번역하는 저장소입니다.
 
