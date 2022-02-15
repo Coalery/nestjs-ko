@@ -118,3 +118,82 @@ export class CatsController {
 ```
 
 간단하죠? Nest는 모든 표준 HTTP 메서드에 대한 데코레이터를 제공합니다: `@Get()`, `@Post()`, `@Put()`, `@Delete()`, `@Patch()`, `@Options()`, `@Head()`. 또, 모든 메서드에 대한 엔드포인트를 정의하고 싶을 때에는 `@All()`을 쓰면 됩니다.
+
+### 라우트 와일드카드
+
+패턴 기반 라우팅도 지원합니다. 예를 들면, 애스터리크(별표, *)는 모든 문자 조합과 매치되는 와일드카드로 사용됩니다.
+
+```ts
+@Get('ab*cd')
+findAll() {
+  return 'This route uses a wildcard';
+}
+```
+
+`'ab*cd'` 라우트 경로는 `abcd`, `ab_cd`, `abecd` 등에 매치됩니다. 라우트 경로에는 `?`, `+`, `*`, `()`를 쓸 수 있으며, 각각은 정규표현식의 같은 문자에 대응되는 부분집합입니다.
+
+### 상태 코드
+
+위에서 말했던 것처럼, POST 요청이 201인 것을 제외하면 응답의 상태 코드는 기본적으로 200입니다. 응답의 상태 코드를 바꾸려면 핸들러에 `@HttpCode(...)`를 붙이면 됩니다.
+
+```ts
+@Post()
+@HttpCode(204)
+create() {
+  return 'This action adds a new cat';
+}
+```
+
+> **팁**
+> 
+> `HttpCode`는 `@nestjs/common` 패키지에서 임포트하세요.
+
+가끔 상태 코드가 정적이지 않고, 여러 요소에 따라 바뀌어야 할 때가 있습니다. 이 경우, `@Res()`를 통해 주입 받은 library-specific 응답 객체를 사용하시면 됩니다. 만약 오류가 발생해서 상태 코드를 바꿔야할 경우, 예외를 발생시키면 됩니다.
+
+### 헤더
+
+직접 응답 헤더를 지정하려면, `@Header()` 데코레이터를 사용하거나 library-specific 응답 객체의 `res.header()`를 직접적으로 호출하면 됩니다.
+
+```ts
+@Post()
+@Header('Cache-Control', 'none')
+create() {
+  return 'This action adds a new cat';
+}
+```
+
+> **팁**
+> 
+> `Header`는 `@nestjs/common` 패키지에서 임포트하세요.
+
+### 리다이렉션
+
+응답을 특정 URL으로 리다이렉트 하려면, `@Redirect()` 데코레이터를 사용하거나 library-specific 응답 객체의 `res.redirect()`를 직접적으로 호출하면 됩니다.
+
+`@Redirect()`는 `url`과 `statusCode` 두 선택 인수를 받습니다. 이때, `statusCode`의 기본 값은 `302`(`Found`)입니다.
+
+```ts
+@Get()
+@Redirect('https://nestjs.com', 301)
+```
+
+가끔, HTTP 상태 코드나 리다이렉트 URL을 동적으로 결정하고 싶을 때가 있을 겁니다. 그때는 아래의 형식을 가진 객체를 라우트 핸들러에서 반환하면 됩니다.
+
+```ts
+{
+  "url": string,
+  "statusCode": number
+}
+```
+
+반환된 값은 `@Redirect()` 데코레이터의 인수를 덮어씌웁니다. 예를 들면 아래와 같습니다.
+
+```ts
+@Get('docs')
+@Redirect('https://docs.nestjs.com', 302)
+getDocs(@Query('version') version) {
+  if (version && version === '5') {
+    return { url: 'https://docs.nestjs.com/v5/' };
+  }
+}
+```
