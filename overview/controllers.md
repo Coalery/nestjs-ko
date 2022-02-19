@@ -252,3 +252,116 @@ export class AccountController {
   }
 }
 ```
+
+### 스코프
+
+다른 프로그래밍 언어 배경을 가진 사람들은 Nest에 들어오는 요청들 간의 거의 모든 것이 공유된다는 것을 받아들이기 힘들 수 있습니다. Nest는 데이터베이스에 대한 연결 풀, 전역 상태의 싱글톤 서비스 등, 여러 공유되는 리소스를 갖고 있습니다. 왜 이렇게 설계되었는지를 이해하려면, 먼저 Node.js는 각각의 요청을 분리된 쓰레드로 처리하는 무상태 요청/응답 멀티 쓰레드 모델을 따르지 않는다는 것을 알아야 합니다. Nest는 Node.js 위에서 동작하기 때문에, 싱글톤 인스턴스를 사용하는 것이 우리의 환경에서는 가장 **안전**합니다.
+
+그러나, GraphQL 어플리케이션에서 각 요청에 대한 캐싱을 하거나, 요청 트래킹, 멀티테넌시(multi-tenancy) 등 요청 기반 수명을 갖는 컨트롤러가 필요한 경우 같은 예외 상황도 존재합니다. 그 때에는 스코프를 다르게 설정해야 하는데, [여기](https://docs.nestjs.com/fundamentals/injection-scopes)를 참고하세요.
+
+### 비동기
+
+우리는 모던 자바스크립트를 좋아하고, 여기서 데이터 추출은 대게 **비동기**로 이루어짐을 알고 있습니다. 그렇기 때문에, Nest는 비동기 함수를 잘 지원하고 잘 작동시킵니다.
+
+> **팁**
+> 
+> `async / await` 기능에 대해 더 알아보려면 [여기](https://kamilmysliwiec.com/typescript-2-1-introduction-async-await)를 참고하세요.
+
+모든 비동기 함수는 `Promise`를 반환해야 합니다. 이는 개발자가 지연된 값을 반환하면, Nest가 스스로 `resolve`한다는 것을 뜻합니다. 아래 예시를 봅시다.
+
+```ts
+// cats.controller.ts
+@Get()
+async findAll(): Promise<any[]> {
+  return [];
+}
+```
+
+위 코드는 잘 작동됩니다. 게다가 Nest의 라우트 핸들러는 RxJS의 [Observable 스트림](http://reactivex.io/rxjs/class/es6/Observable.js~Observable.html) 또한 반환할 수 있기 때문에 더욱 강력합니다. Nest는 자동으로 스트림을 subscribe 하고, 스트림이 한 번 완료되면 마지막에 발생한 값을 가져옵니다.
+
+```ts
+// cats.controller.ts
+@Get()
+findAll(): Observable<any[]> {
+  return of([]);
+}
+```
+
+위의 두 방법은 모두 잘 작동하며, 필요에 따라 사용하면 됩니다.
+
+### 요청의 바디 데이터
+
+이전의 POST 라우트 핸들러 예시는 클라이언트의 매개변수를 받지 않았습니다. 이를 `@Body()` 데코레이터를 추가하여 고쳐봅시다.
+
+그 전에, 타입스크립트를 사용한다면 먼저 **DTO**(Data Transfer Object) 스키마를 정의해야 합니다. DTO는 네트워크를 통해서 어떻게 데이터가 보내질 것인가를 정의한 객체입니다. DTO 스키마는 **타입스크립트**의 인터페이스나 간단하게 클래스를 사용하여 정의할 수 있습니다. 여기에는 클래스를 쓸 것을 추천드립니다. 그 이유는, 클래스는 자바스크립트 ES6 표준의 한 부분이므로 자바스크립트로 컴파일 될 때, 사라지지 않고 실제 요소로 보존되기 때문입니다. 또, 타입스크립트의 인터페이스는 트랜스파일(transpile) 과정에서 사라지기 때문에, Nest가 런타임에 사용할 수가 없게 됩니다. 이는 **Pipes** 같은 기능에서 런타임에 변수의 메타타입에 접근할 수도 있기 때문에 중요합니다.
+
+자, 이제 `CreateCatDto` 클래스를 만들어봅시다.
+
+```ts
+// create-cat.dto.ts
+export class CreateCatDto {
+  name: string;
+  age: number;
+  breed: string;
+}
+```
+
+위 클래스는 세 가지의 기본적인 속성을 갖고 있습니다. 이제 `CatsController` 안에서 새로 만든 DTO를 아래와 같이 사용할 수 있습니다.
+
+```ts
+// cats.controller.ts
+@Post()
+async create(@Body() createCatDto: CreateCatDto) {
+  return 'This action adds a new cat';
+}
+```
+
+> **팁**
+> 
+> 메서드 헨들러에 들어오면 안되는 속성들을 `ValidationPipe`를 통해서 걸러낼 수 있습니다. 이 경우, 허용되는 속성을 설정하고(whitelist) 허용되지 않는 속성은 자동적으로 결과 객체에서 뺄 수 있습니다. 위의 `CreateCatDto` 예시의 경우, 우리가 허용한 속성은 `name`, `age`, `breed`가 됩니다. 더 알아보시려면, [여기](https://docs.nestjs.com/techniques/validation#stripping-properties)를 참고하세요.
+
+### 에러 처리
+
+예외를 활용하는 법 등, 에러를 처리하는 방법은 [여기](https://docs.nestjs.com/exception-filters)로 나눠졌습니다.
+
+### 활용 예시
+
+아래는 몇몇 데코레이터를 사용한 기본적인 컨트롤러의 예시입니다. 이 컨트롤러는 내부 데이터에 접근하고, 조작할 수 있는 여러 메서드를 제공합니다.
+
+```ts
+// cats.controller.ts
+import { Controller, Get, Query, Post, Body, Put, Param, Delete } from '@nestjs/common';
+import { CreateCatDto, UpdateCatDto, ListAllEntities } from './dto';
+
+@Controller('cats')
+export class CatsController {
+  @Post()
+  create(@Body() createCatDto: CreateCatDto) {
+    return 'This action adds a new cat';
+  }
+
+  @Get()
+  findAll(@Query() query: ListAllEntities) {
+    return `This action returns all cats (limit: ${query.limit} items)`;
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return `This action returns a #${id} cat`;
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() updateCatDto: UpdateCatDto) {
+    return `This action updates a #${id} cat`;
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return `This action removes a #${id} cat`;
+  }
+}
+```
+
+> **팁**
+> 
+> Nest CLI는 위의 모든 일을 할 필요가 없게 **모든 기반 코드**를 자동으로 생성하여 개발자 경험이 더 간단하게 만드는 생성기를 제공합니다. 이 기능에 대해서 더 알아보고 싶다면, [여기](https://docs.nestjs.com/recipes/crud-generator)를 참고하세요.
