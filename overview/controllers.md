@@ -365,3 +365,59 @@ export class CatsController {
 > **팁**
 > 
 > Nest CLI는 위의 모든 일을 할 필요가 없게 **모든 기반 코드**를 자동으로 생성하여 개발자 경험이 더 간단하게 만드는 생성기를 제공합니다. 이 기능에 대해서 더 알아보고 싶다면, [여기](https://docs.nestjs.com/recipes/crud-generator)를 참고하세요.
+
+### 시작 및 실행
+
+위의 컨트롤러가 모두 정의되어도, Nest는 `CatsController`가 존재한다는 사실을 모르며, 이 때문에 클래스의 인스턴스가 생성되지 않습니다.
+
+컨트롤러는 항상 모듈에 속해아 하므로, `@Module()` 데코레이터 내의 `controllers` 배열에 추가해주어야 합니다. 아직 `AppModule`을 제외하고는 아무 모듈도 정의하지 않았으므로, 이 모듈을 이용해서 Nest에게 `CatsController`를 알려줍시다.
+
+```ts
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { CatsController } from './cats/cats.controller';
+
+@Module({
+  controllers: [CatsController],
+})
+export class AppModule {}
+```
+
+`@Module()` 데코레이터를 달아서, 모듈 클래스에 메타데이터를 설정했습니다. 이제, Nest는 어떤 컨트롤러를 마운트해야 하는지 쉽게 알 수 있습니다.
+
+### 특정 라이브러리에 대한 방법
+
+지금까지 Nest가 응답을 다루는 표준 방법에 대해서 이야기 했습니다. 응답을 다루는 두 번째 방법은, library-specific [응답 객체](https://expressjs.com/en/api.html#res)를 사용하는 것입니다. 특정 응답 객체를 가져오기 위해서는, `@Res()` 데코레이터를 사용해야 합니다. 차이점을 보기 위해, 아래와 같이 `CatsController`를 다시 써보았습니다.
+
+```ts
+// cats.controller.ts
+import { Controller, Get, Post, Res, HttpStatus } from '@nestjs/common';
+import { Response } from 'express';
+
+@Controller('cats')
+export class CatsController {
+  @Post()
+  create(@Res() res: Response) {
+    res.status(HttpStatus.CREATED).send();
+  }
+
+  @Get()
+  findAll(@Res() res: Response) {
+     res.status(HttpStatus.OK).json([]);
+  }
+}
+```
+
+위 방법이 잘 작동하고, 응답 객체에 대한 완전한 조작(헤더, 특정 라이브러리에 대한 기능 등)을 제공하기 때문에 더 유연한 것은 맞지만, 주의를 가지고 사용해야 합니다. 일반적으로, 이 방법은 덜 명확해보이기도 하고 몇몇의 단점도 있습니다. 가장 큰 단점은 코드가 특정 플랫폼에 의존하게 된다는 것과, 테스트하기 힘들어진다는 것(가짜 응답 객체를 만들어야 함), 두 가지를 들 수 있습니다.
+
+또한 위 예시의 경우, 인터셉터나 `@HttpCode()`, `Header()` 데코레이터 등 Nest의 표준 응답 처리 방법에 의존한 Nest의 기능들을 사용할 수 없게 됩니다. 이를 고치려면, 아래와 같이 `passthrough` 옵션을 `true`로 주면 됩니다.
+
+```ts
+@Get()
+findAll(@Res({ passthrough: true }) res: Response) {
+  res.status(HttpStatus.OK);
+  return [];
+}
+```
+
+이제 어떠한 조건에 따라 쿠키나 헤더를 설정하는 등, 네이티브 객체와 상호작용 가능하면서 동시에 나머지는 프레임워크가 처리할 수 있도록 할 수 있습니다.
