@@ -78,3 +78,13 @@ export class CatsController {
 ```
 
 `CatsService`는 클래스의 생성자를 통해 주입됩니다. 위 코드에서는 `private` 문법을 사용하고 있는데, 이를 통해 한 번에 `catsService` 멤버를 선언하고 초기화시킬 수 있습니다.
+
+### 의존성 주입
+
+Nest는 **의존성 주입**이라는 강력한 디자인 패턴을 중심으로 만들어졌습니다. 이 개념에 대해 더 알아보시려면, 공식 [Angular](https://angular.io/guide/dependency-injection) 문서의 글을 읽어보시는 것을 추천드립니다.
+
+타입스크립트의 기능 덕분에, 의존성은 타입만으로 해결될 수 있습니다. 이 덕분에 Nest에서는 의존성을 쉽게 관리할 수 있습니다. 예를 들면, 아래의 코드에서 Nest는 `CatsService`의 인스턴스를 만들고 반환하여 `catsService`에 주입하게 됩니다. 싱글톤의 경우 다른 곳에서 요청되어 이미 존재한다면 해당 인스턴스를 반환하게 됩니다. 이 의존성은 컨트롤러의 생성자에 전달되거나, 지정된 속성에 할당됩니다.
+
+```typescript
+constructor(private catsService: CatsService) {}
+```
