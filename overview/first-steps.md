@@ -52,7 +52,7 @@ src
 
 `main.ts`는 우리의 어플리케이션을 시작할 비동기 함수를 갖고 있습니다.
 
-```ts
+```typescript
 // main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -83,7 +83,7 @@ Nest는 플랫폼에 구애 받지 않는 프레임워크를 목표로 합니다
 
 아래 예시처럼 `NestFactory.create()` 메서드에 타입을 넣으면, `app` 객체는 특정 플랫폼에서만 사용할 수 있는 메서드를 갖게 됩니다. 만약 기본 플랫폼 API에 접근할 필요가 없는 경우, 굳이 타입을 지정할 필요는 없습니다.
 
-```ts
+```typescript
 const app = await NestFactory.create<NestExpressApplication>(AppModule);
 ```
 

@@ -18,7 +18,7 @@ description: "원문 : https://docs.nestjs.com/providers"
 
 간단한 `CatsService`를 만들어보며 시작해봅시다. 이 서비스는 데이터를 저장하고 조회하는 역할을 맡았고, `CatsController`에서 사용되도록 설계되었습니다. 따라서 이는 프로바이더로 정의하는 것이 좋습니다.
 
-```ts
+```typescript
 // cats.service.ts
 import { Injectable } from '@nestjs/common';
 import { Cat } from './interfaces/cat.interface';
@@ -43,7 +43,7 @@ export class CatsService {
 
 `CatsService`는 하나의 프로퍼티와 두 개의 메서드를 가진 기본적인 클래스입니다. 새로운 점은 `@Injectable()` 데코레이터를 사용했다는 점인데요. `@Injectable()` 데코레이터는 `CatsService`가 Nest IoC 컨테이너에 의해 관리될 수 있는 클래스라는 것을 알려주는 메타데이터를 붙여줍니다. 한편, 위 예제는 `Cat` 인터페이스도 사용하는데요. 아래와 같이 이렇게 생겼습니다.
 
-```ts
+```typescript
 // interfaces/cat.interface.ts
 export interface Cat {
   name: string;
@@ -54,7 +54,7 @@ export interface Cat {
 
 이제 고양이를 조회할 서비스 클래스를 만들었으니, 이를 `CatsController`에서 써봅시다.
 
-```ts
+```typescript
 // cats.controller.ts
 import { Controller, Get, Post, Body } from '@nestjs/common';
 import { CreateCatDto } from './dto/create-cat.dto';
