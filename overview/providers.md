@@ -112,4 +112,64 @@ export class HttpService<T> {
 }
 ```
 
-위 예제에서는 `HTTP_OPTIONS`라는 사용자 지정 **토큰**을 사용하기 때문에, 커스텀 프로바이더를 사용한 것입니다. 이는 클래스의 생성자에서 의존성을 표시하는 생성자 기반 주입의 예시를 보여주고 있습니다. 커스텀 프로바이더와 관련 토큰에 대해 더 알아보시려면 [여기](https://docs.nestjs.com/fundamentals/custom-providers)를 참고하세요.
+위 예제에서는 `HTTP_OPTIONS`라는 사용자 지정 **토큰**을 사용하기 때문에, 커스텀 프로바이더를 사용한 것입니다. 이는 클래스의 생성자에서 의존성을 표시하는 '생성자 기반 주입'의 예시를 보여주고 있습니다. 커스텀 프로바이더와 관련 토큰에 대해 더 알아보시려면 [여기](https://docs.nestjs.com/fundamentals/custom-providers)를 참고하세요.
+
+### 속성 기반 주입
+
+앞에서 살펴본 기술은 생성자 메서드를 통해서 프로바이더가 주입되는 '생성자 기반 주입'입니다. 한편, 어떤 특수한 경우에는 **속성 기반 주입**이 유용합니다. 예를 들어 최상위 클래스가 하나 이상의 프로바이더에 의존하고 있다면, 이들을 서브 클래스들의 생성자에서 `super()`를 계속 호출하여 최상위 클래스로 보내는 것은 꽤 귀찮은 일입니다. 이를 피하기 위해서, 속성 단에서 `@Inject()` 데코레이터를 사용할 수도 있습니다.
+
+```typescript
+import { Injectable, Inject } from '@nestjs/common';
+
+@Injectable()
+export class HttpService<T> {
+  @Inject('HTTP_OPTIONS')
+  private readonly httpClient: T;
+}
+```
+
+> **주의**
+> 
+> 만약 클래스가 다른 프로바이더를 상속 받지 않는 경우에는, 항상 **생성자 기반 주입**을 사용하는 것이 더 낫습니다.
+
+### 프로바이더 등록
+
+이제 프로바이더(`CatsService`)를 선언했고, 이 서비스를 사용하는 컨트롤러(`CatsController`)도 만들었습니다. 이제, 주입이 일어날 수 있도록 Nest에 서비스를 등록해야 합니다. 모듈 파일(`app.module.ts`)에 있는 `@Module()` 데코레이터의 `providers` 배열에 서비스를 추가해봅시다.
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { CatsController } from './cats/cats.controller';
+import { CatsService } from './cats/cats.service';
+
+@Module({
+  controllers: [CatsController],
+  providers: [CatsService],
+})
+export class AppModule {}
+```
+
+Nest는 이제 `CatsController` 클래스의 의존성을 해결할 수 있게 되었습니다!
+
+현재 디렉토리 구조는 이렇습니다.
+
+```
+src
+├─ cats
+│   ├─ dto
+│   │   └─ create-cat.dto.ts
+│   ├─ interfaces
+│   │   └─ cat.interface.ts
+│   ├─ cats.controller.ts
+│   └─ cats.service.ts
+├─ app.module.ts
+└─ main.ts
+```
+
+### 수동 인스턴스 생성
+
+이때까지, Nest가 어떻게 의존성 처리를 자동으로 처리하는지 알아보았습니다. 어떤 특정 상황에서는 내장된 의존성 주입 시스템을 사용하지 않고, 직접 프로바이더를 만들거나 가져와야 할 수도 있습니다. 이에 대해서, 잠시 두 가지 주제를 아래에서 알아보겠습니다.
+
+이미 존재하는 인스턴스나, 프로바이더의 인스턴스를 동적으로 만들어야 한다면, [여기](https://docs.nestjs.com/fundamentals/module-ref)를 참고해주세요.
+
+컨트롤러 없이 독립적으로 동작하는 어플리케이션이나, 켜는 동안 설정(config) 서비스를 사용해야 하는 경우 등, `bootstrap()` 함수 내에서 프로바이더를 가져와야 한다면 [여기](https://docs.nestjs.com/standalone-applications)를 참고해주세요.
