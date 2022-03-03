@@ -92,3 +92,24 @@ constructor(private catsService: CatsService) {}
 ### 스코프
 
 프로바이더는 일반적으로 어플리케이션의 수명 주기와 연관된 수명(스코프)이 있습니다. 어플리케이션이 시작될 때에 모든 의존성들이 만들어져야 하므로, 모든 프로바이더를 인스턴스화 하게 됩니다. 유사하게, 어플리케이션이 꺼질 때에는 모든 프로바이더가 없어지게 됩니다. 하지만, 프로바이더의 수명 기준을 어플리케이션이 아니라, **요청마다** 만들어졌다 없어지게 만들 수도 있습니다(request-scoped). 이 기술에 대해서 더 알아보려면 [여기](https://docs.nestjs.com/fundamentals/injection-scopes)를 참고해주세요.
+
+### 커스텀 프로바이더
+
+Nest는 프로바이더들 사이의 관계를 만드는 제어 반전(Inversion of Control, IoC) 컨테이너를 갖고 있으며, 이는 위에서 설명한 의존성 주입의 기반이 됩니다. 하지만, 이 기능은 앞서 설명했던 것보다 훨씬 강력합니다. 이 덕분에 프로바이더를 선언할 때 일반 값, 클래스, 혹은 동기, 비동기 팩토리 등 여러 가지의 방법을 사용할 수 있습니다. 예시를 보려면 [여기](https://docs.nestjs.com/fundamentals/dependency-injection)를 참고하세요.
+
+### Optional 프로바이더
+
+가끔, 굳이 만들어질 필요가 없는 의존성이 필요할 때가 있습니다. 예를 들면, 클래스가 어떤 **설정(config) 객체**에 의존하고, 이 객체가 없을 때 기본 값을 사용하는 상황이 생길 수 있습니다. 이 경우, 설정 프로바이더가 없어서 에러가 발생하진 않으므로 의존성은 선택 사항이 됩니다.
+
+프로바이더를 선택 사항으로 만들려면, 생성자 시그니쳐에 `@Optional()` 데코레이터를 붙이면 됩니다.
+
+```typescript
+import { Injectable, Optional, Inject } from '@nestjs/common';
+
+@Injectable()
+export class HttpService<T> {
+  constructor(@Optional() @Inject('HTTP_OPTIONS') private httpClient: T) {}
+}
+```
+
+위 예제에서는 `HTTP_OPTIONS`라는 사용자 지정 **토큰**을 사용하기 때문에, 커스텀 프로바이더를 사용한 것입니다. 이는 클래스의 생성자에서 의존성을 표시하는 생성자 기반 주입의 예시를 보여주고 있습니다. 커스텀 프로바이더와 관련 토큰에 대해 더 알아보시려면 [여기](https://docs.nestjs.com/fundamentals/custom-providers)를 참고하세요.
