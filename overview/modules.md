@@ -72,3 +72,27 @@ src
 ├─ app.module.ts
 └─ main.ts
 ```
+
+### 공유 모듈
+
+Nest에서 모듈들은 기본적으로 **싱글톤**입니다. 따라서, 큰 노력 없이 여러 모듈에서 어떠한 프로바이더든 같은 인스턴스를 공유할 수 있습니다.
+
+![Shared_Module_1.png](https://docs.nestjs.com/assets/Shared_Module_1.png)
+
+모든 모듈은 공유 모듈입니다. 한 번 생성되면, 어떠한 모듈에서든 이를 재사용할 수 있게 됩니다. 자, 이제 `CatsService`의 인스턴스를 여러 다른 모듈에서 공유해야하는 상황을 가정해봅시다. 이를 위해선 먼저, `CatsService` 프로바이더를 모듈의 `exports` 배열에 추가하여 해당 프로바이더를 **내보내야** 합니다. 아래와 같이 말이죠.
+
+```typescript
+// cats.module.ts
+import { Module } from '@nestjs/common';
+import { CatsController } from './cats.controller';
+import { CatsService } from './cats.service';
+
+@Module({
+  controllers: [CatsController],
+  providers: [CatsService],
+  exports: [CatsService]
+})
+export class CatsModule {}
+```
+
+이제 `CatsModule`을 임포트한 모듈은 모두 `CatsService`에 접근할 수 있게 되며, 임포트한 모든 다른 모듈들은 같은 인스턴스를 공유하게 됩니다.
