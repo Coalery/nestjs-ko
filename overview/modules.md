@@ -96,3 +96,15 @@ export class CatsModule {}
 ```
 
 이제 `CatsModule`을 임포트한 모듈은 모두 `CatsService`에 접근할 수 있게 되며, 임포트한 모든 다른 모듈들은 같은 인스턴스를 공유하게 됩니다.
+
+### 모듈 다시 내보내기
+
+위에서 봤듯이, 모듈은 자신이 갖고 있는 프로바이더를 내보낼 수 있습니다. 게다가, 자신이 임포트한 모듈을 다시 내보낼 수도 있습니다. 아래 예시에서, `CommonModule`은 `CoreModule`에서 임포트도 되고, 내보내지기도 합니다. 이를 통해 다른 모듈에서 `CoreModule`을 임포트하면 둘 다 사용할 수 있게 됩니다.
+
+```typescript
+@Module({
+  imports: [CommonModule],
+  exports: [CommonModule],
+})
+export class CoreModule {}
+```
