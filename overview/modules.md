@@ -20,3 +20,55 @@ description: "원문 : https://docs.nestjs.com/modules"
 |`exports`|`providers`의 부분집합이며, 다른 모듈에서 이 모듈을 임포트 했을 때 사용할 수 있도록 할 프로바이더들. 프로바이더 자체나, 프로바이더의 토큰을 넣을 수 있음.|
 
 모듈은 기본적으로 프로바이더들을 **캡슐화**합니다. 이는, 현재 모듈에 직접적으로 속해 있지 않거나, 임포트 한 모듈에서 내보내지 않는 프로바이더는 주입하는 것이 불가능하다는 것을 뜻합니다. 따라서, 모듈에서 내보내진 프로바이더는 모듈의 공개 인터페이스나 API라고 볼 수 있습니다.
+
+### 기능 모듈
+
+`CatsController`와 `CatsService`는 같은 어플리케이션 도메인에 속해 있습니다. 두 클래스는 서로 밀접한 관계에 있기 때문에, 기능 모듈로 묶는 것이 좋습니다. 기능 모듈은 적절하게 코드를 조직하여 코드를 체계적으로 유지하고, 기능 간에 확실한 경계를 만들 수 있습니다. 이는 특히 어플리케이션이나 팀의 규모가 성장할 때, 소프트웨어의 복잡도를 관리하고 [SOLID](https://en.wikipedia.org/wiki/SOLID) 원리를 따라서 개발할 수 있도록 도와줍니다.
+
+`CatsModule`을 만들어봅시다.
+
+```typescript
+// cats/cats.module.ts
+import { Module } from '@nestjs/common';
+import { CatsController } from './cats.controller';
+import { CatsService } from './cats.service';
+
+@Module({
+  controllers: [CatsController],
+  providers: [CatsService],
+})
+export class CatsModule {}
+```
+
+> **팁**
+> 
+> CLI를 통해 모듈을 만들려면, `$ nest g module cats` 명령어를 실행시켜보세요.
+
+`cats.module.ts` 파일 안에 `CatsModule`을 정의했고, 이 모듈에 관련된 모든 것을 `cats` 디렉토리 내로 옮겼습니다. 마지막으로, 이 모듈을 루트 모듈(`app.module.ts` 파일에 정의되어 있는 `AppModule`)에 임포트 해야 합니다.
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { CatsModule } from './cats/cats.module';
+
+@Module({
+  imports: [CatsModule],
+})
+export class AppModule {}
+```
+
+현재 디렉토리 구조는 이렇습니다.
+
+```
+src
+├─ cats
+│   ├─ dto
+│   │   └─ create-cat.dto.ts
+│   ├─ interfaces
+│   │   └─ cat.interface.ts
+│   ├─ cats.controller.ts
+│   ├─ cats.module.ts
+│   └─ cats.service.ts
+├─ app.module.ts
+└─ main.ts
+```
