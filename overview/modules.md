@@ -108,3 +108,50 @@ export class CatsModule {}
 })
 export class CoreModule {}
 ```
+
+### 의존성 주입
+
+모듈 클래스는 프로바이더를 주입할 수도 있습니다.
+
+```typescript
+// cats.module.ts
+import { Module } from '@nestjs/common';
+import { CatsController } from './cats.controller';
+import { CatsService } from './cats.service';
+
+@Module({
+  controllers: [CatsController],
+  providers: [CatsService],
+})
+export class CatsModule {
+  constructor(private catsService: CatsService) {}
+}
+```
+
+그러나, 모듈 클래스 자체는 [순환 의존성(Circular Dependency)](https://docs.nestjs.com/fundamentals/circular-dependency) 때문에 프로바이더로 주입될 수 없습니다.
+
+### 전역 모듈
+
+만약 어떤 모듈을 모든 곳에서 임포트 해야 한다면, 이는 상당히 귀찮은 작업일 것입니다. Nest와는 다르게 [Angular](https://angular.io/)의 `providers`는 전역 스코프에 등록됩니다. 즉, Angular에서는 한 번 정의되면 어디서든 쓸 수 있다는 것입니다. 하지만 Nest에서는 프로바이더를 모듈 스코프에서 캡슐화하기 때문에, 먼저 캡슐화한 모듈을 임포트하지 않는다면 모듈의 프로바이더를 쓸 수 없습니다.
+
+어떤 프로바이더를 모든 곳에서 쓸 수 있게 하고 싶을 땐, `@Global()` 데코레이터를 붙여서 전역 모듈로 만들면 됩니다.
+
+```typescript
+import { Module, Global } from '@nestjs/common';
+import { CatsController } from './cats.controller';
+import { CatsService } from './cats.service';
+
+@Global()
+@Module({
+  controllers: [CatsController],
+  providers: [CatsService],
+  exports: [CatsService],
+})
+export class CatsModule {}
+```
+
+`@Global()` 데코레이터가 모듈을 전역 스코프로 만들어줍니다. 전역 모듈은 단 한 번 등록되어야 하며, 일반적으로 루트 모듈이나 핵심 모듈에 등록됩니다. 위 예시에서 `CatService` 프로바이더는 어디서든 쓸 수 있게 되고, 해당 서비스를 주입 받고 싶어하는 모듈에서는 굳이 `CatsModule`을 `imports` 배열에 넣을 필요가 없어지게 됩니다.
+
+> **팁**
+> 
+> 모든 것을 전역적으로 만드는 것은 좋은 디자인이 아닙니다. 전역 모듈은 애플리케이션의 기반을 만들 때 여러 곳에서 반복되는 코드를 줄이기 위해 존재합니다. 따라서, 모듈의 `imports` 배열을 사용하는 것이 일반적으로 모듈의 API를 다른 모듈에서 사용할 수 있게 하는 더 좋은 방법입니다.
