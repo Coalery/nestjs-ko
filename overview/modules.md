@@ -111,7 +111,7 @@ export class CoreModule {}
 
 ### 의존성 주입
 
-모듈 클래스는 프로바이더를 주입할 수도 있습니다.
+모듈 클래스는 프로바이더를 **주입**할 수도 있습니다.
 
 ```typescript
 // cats.module.ts
@@ -134,7 +134,7 @@ export class CatsModule {
 
 만약 어떤 모듈을 모든 곳에서 임포트 해야 한다면, 이는 상당히 귀찮은 작업일 것입니다. Nest와는 다르게 [Angular](https://angular.io/)의 `providers`는 전역 스코프에 등록됩니다. 즉, Angular에서는 한 번 정의되면 어디서든 쓸 수 있다는 것입니다. 하지만 Nest에서는 프로바이더를 모듈 스코프에서 캡슐화하기 때문에, 먼저 캡슐화한 모듈을 임포트하지 않는다면 모듈의 프로바이더를 쓸 수 없습니다.
 
-어떤 프로바이더를 모든 곳에서 쓸 수 있게 하고 싶을 땐, `@Global()` 데코레이터를 붙여서 전역 모듈로 만들면 됩니다.
+어떤 프로바이더(헬퍼, DB 연결 등)를 모든 곳에서 쓸 수 있게 하고 싶을 땐, `@Global()` 데코레이터를 붙여서 **전역 모듈**로 만들면 됩니다.
 
 ```typescript
 import { Module, Global } from '@nestjs/common';
@@ -150,8 +150,84 @@ import { CatsService } from './cats.service';
 export class CatsModule {}
 ```
 
-`@Global()` 데코레이터가 모듈을 전역 스코프로 만들어줍니다. 전역 모듈은 단 한 번 등록되어야 하며, 일반적으로 루트 모듈이나 핵심 모듈에 등록됩니다. 위 예시에서 `CatService` 프로바이더는 어디서든 쓸 수 있게 되고, 해당 서비스를 주입 받고 싶어하는 모듈에서는 굳이 `CatsModule`을 `imports` 배열에 넣을 필요가 없어지게 됩니다.
+`@Global()` 데코레이터가 모듈을 전역 스코프로 만들어줍니다. 전역 모듈은 **단 한 번** 등록되어야 하며, 일반적으로 루트 모듈이나 핵심 모듈에 등록됩니다. 위 예시에서 `CatService` 프로바이더는 어디서든 쓸 수 있게 되고, 해당 서비스를 주입 받고 싶어하는 모듈에서는 굳이 `CatsModule`을 `imports` 배열에 넣을 필요가 없어지게 됩니다.
 
 > **팁**
 > 
 > 모든 것을 전역적으로 만드는 것은 좋은 디자인이 아닙니다. 전역 모듈은 애플리케이션의 기반을 만들 때 여러 곳에서 반복되는 코드를 줄이기 위해 존재합니다. 따라서, 모듈의 `imports` 배열을 사용하는 것이 일반적으로 모듈의 API를 다른 모듈에서 사용할 수 있게 하는 더 좋은 방법입니다.
+
+### 동적 모듈
+
+Nest의 모듈 시스템은 **동적 모듈**이라는 강력한 기능이 있습니다. 이 기능을 통해 프로바이더를 동적으로 등록하고 설정할 수 있는, 커스텀 가능한 모듈을 쉽게 만들 수 있습니다. 동적 모듈에 관해서는 [여기](https://docs.nestjs.com/fundamentals/dynamic-modules)서 더 자세히 다룹니다. 이 챕터에서는 모듈의 소개를 끝내기 위해, 간단하게 요약해서 설명합니다.
+
+아래의 예시는 `DatabaseModule`의 동적 모듈 정의입니다.
+
+```typescript
+import { Module, DynamicModule } from '@nestjs/common';
+import { createDatabaseProviders } from './database.providers';
+import { Connection } from './connection.provider';
+
+@Module({
+  providers: [Connection],
+})
+export class DatabaseModule {
+  static forRoot(entities = [], options?): DynamicModule {
+    const providers = createDatabaseProviders(options, entities);
+    return {
+      module: DatabaseModule,
+      providers: providers,
+      exports: providers,
+    };
+  }
+}
+```
+
+> **팁**
+> 
+> `forRoot()` 메서드는 동기적으로, 혹은 `Promise` 등을 통해 비동기적으로 동적 모듈을 반환합니다.
+
+이 모듈은 `@Module()` 데코레이터를 통해 `Connection` 프로바이더를 기본적으로 정의합니다. 그러나 추가적으로, `forRoot()` 메서드의 매개변수로 들어온 `entities`와 `options` 객체에 따라 저장소(Repository) 등의 어떤 프로바이더들을 노출하게 됩니다. 동적 모듈을 통해 반환된 속성들은 `@Module()` 데코레이터에 정의된 기본 모듈 메타데이터를 **확장**합니다. (오버라이딩이 아닙니다!) 이렇게 하면, 정적으로 정의된 `Connection` 프로바이더**와** 동적으로 생성된 저장소 프로바이더 둘 다 모듈에서 내보내지게 됩니다.
+
+만약 동적 모듈을 전역 스코프에 등록하고 싶다면, `global` 속성을 `true`로 주면 됩니다.
+
+```typescript
+{
+  global: true,
+  module: DatabaseModule,
+  providers: providers,
+  exports: providers,
+}
+```
+
+> **주의**
+> 
+> 위에서 언급했듯이, 모든 것을 전역적으로 만드는 것은 좋은 디자인이 아닙니다.
+
+`DatabaseModule`은 아래와 같이 임포트, 설정할 수 있습니다.
+
+```typescript
+import { Module } from '@nestjs/common';
+import { DatabaseModule } from './database/database.module';
+import { User } from './users/entities/user.entity';
+
+@Module({
+  imports: [DatabaseModule.forRoot([User])],
+})
+export class AppModule {}
+```
+
+만약 동적 모듈을 다시 내보내고 싶다면, `exports` 배열에서 `forRoot()`  호출을 제외할 수 있습니다.
+
+```typescript
+import { Module } from '@nestjs/common';
+import { DatabaseModule } from './database/database.module';
+import { User } from './users/entities/user.entity';
+
+@Module({
+  imports: [DatabaseModule.forRoot([User])],
+  exports: [DatabaseModule],
+})
+export class AppModule {}
+```
+
+[동적 모듈](https://docs.nestjs.com/fundamentals/dynamic-modules) 챕터에서는 이 주제를 더 자세히 다루고, [실제로 작동하는 예시](https://github.com/nestjs/nest/tree/master/sample/25-dynamic-modules)를 포함합니다.
