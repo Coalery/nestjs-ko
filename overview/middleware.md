@@ -32,3 +32,55 @@ export class LoggerMiddleware implements NestMiddleware {
   }
 }
 ```
+
+### 의존성 주입
+
+Nest 미들웨어는 의존성 주입을 지원합니다. 프로바이더나 컨트롤러와 마찬가지로, 같은 모듈 안에 있는 **의존성을 주입** 받을 수 있습니다. 늘 그래왔듯이 `constructor`를 통해서 의존성을 주입 받으면 됩니다.
+
+### 미들웨어 적용
+
+`@Module()` 데코레이터에는 미들웨어를 넣을 공간이 없습니다. 대신에, 모듈 클래스의 `configure()` 메서드로 미들웨어를 적용시킬 수 있습니다. 미들웨어를 포함하는 모듈은 `NestModule` 인터페이스를 구현해야 합니다. 한 번 `LoggerMiddleware`를 `AppModule`에 적용시켜볼까요?
+
+```typescript
+// app.module.ts
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { CatsModule } from './cats/cats.module';
+
+@Module({
+  imports: [CatsModule],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(LoggerMiddleware)
+      .forRoutes('cats');
+  }
+}
+```
+
+위 예시에서는, 이전에 `CatsController` 안에 정의했었던 `/cats` 라우트 핸들러에 대해 `LoggerMiddleware`를 적용시켜 보았습니다. 만약 특정 HTTP 요청 메서드(GET, POST 등)에 대해서만 미들웨어를 적용시키고 싶다면, `forRoutes()` 메서드에 경로 `path`와 HTTP 요청 메서드 `method`를 가진 객체를 넘겨주면 됩니다.
+
+아래 예시에서는, `RequestMethod` 열거형을 사용해서 원하는 HTTP 요청 메서드를 설정하였습니다.
+
+```typescript
+// app.module.ts
+import { Module, NestModule, RequestMethod, MiddlewareConsumer } from '@nestjs/common';
+import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { CatsModule } from './cats/cats.module';
+
+@Module({
+  imports: [CatsModule],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(LoggerMiddleware)
+      .forRoutes({ path: 'cats', method: RequestMethod.GET });
+  }
+}
+```
+
+> **팁**
+> 
+> `configure()` 메서드는 `async/await`를 사용해서 비동기로 만들 수 있습니다. 
