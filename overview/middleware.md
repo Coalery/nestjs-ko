@@ -84,3 +84,44 @@ export class AppModule implements NestModule {
 > **팁**
 > 
 > `configure()` 메서드는 `async/await`를 사용해서 비동기로 만들 수 있습니다. 
+
+### 라우트 와일드카드
+
+패턴 기반 라우트도 지원합니다. 예를 들어, 별표(asterisk, *)는 **와일드카드**로 사용할 수 있으며, 어떤 조합의 문자들과도 매치됩니다.
+
+```typescript
+forRoutes({ path: 'ab*cd', method: RequestMethod.ALL });
+```
+
+`'ab*cd'` 라우트 경로는 `abcd`, `ab_cd`, `abecd` 등에 매치됩니다. 라우트 경로에는 `?`, `+`, `*`, `()`를 쓸 수 있으며, 각각은 정규표현식의 같은 문자에 대응되는 부분집합입니다. 하이픈(`-`)과 점(`.`)은 문자 그대로 해석됩니다.
+
+> **주의**
+> 
+> `fastify` 패키지는 별표(`*`) 와일드카드를 더 이상 지원하지 않는 최신 버전의 `path-to-regexp` 패키지를 사용합니다. 따라서, 파라미터를 사용해야 합니다. (ex., `(.*)`, `:splat*`)
+
+### MiddlewareConsumer
+
+`MiddlewareConsumer`는 헬퍼 클래스이며, 미들웨어를 관리하기 위한 몇 가지의 빌트인 메서드를 제공합니다. 해당 클래스의 모든 메서드들은 [Fluent 스타일](https://en.wikipedia.org/wiki/Fluent_interface)로 간단하게 **연결(chain)** 할 수 있습니다. `forRoutes()` 메서드는 문자열 하나, 문자열 여러 개, `RouteInfo` 객체, 컨트롤러 클래스 하나, 심지어는 컨트롤러 클래스 여러 개도 들어갈 수 있습니다. 대부분의 경우에서는 아마 컨트롤러들의 리스트를 반점(,)으로 구분하여 넘겨줄 겁니다. 아래의 예는 컨트롤러 하나를 넘겨준 예시입니다.
+
+```typescript
+// app.module.ts
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { CatsModule } from './cats/cats.module';
+import { CatsController } from './cats/cats.controller';
+
+@Module({
+  imports: [CatsModule],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(LoggerMiddleware)
+      .forRoutes(CatsController);
+  }
+}
+```
+
+> **팁**
+> 
+> `apply()` 메서드에는 미들웨어 하나를 넘겨줄 수도 있고, [여러 미들웨어](https://docs.nestjs.com/middleware#multiple-middleware)를 넘겨줄 수도 있습니다.
