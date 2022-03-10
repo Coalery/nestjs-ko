@@ -173,3 +173,26 @@ consumer
 > **팁**
 > 
 > 만든 미들웨어가 의존성이 필요하지 않으면, 더 간단한 **함수형 미들웨어**로 바꾸는 걸 고려해보세요.
+
+### 다중 미들웨어
+
+위에서 언급했듯이, 연속적으로 실행되는 여러 미들웨어를 적용하려면 `apply()` 메서드에 반점(,)으로 구분된 미들웨어의 리스트를 넘겨주면 됩니다.
+
+```typescript
+consumer.apply(cors(), helmet(), logger).forRoutes(CatsController);
+```
+
+### 전역 미들웨어
+
+만약 등록된 모든 라우트에 미들웨어를 적용시키고 싶다면, `INestApplication` 인스턴스에서 제공하는 `use()` 메서드를 사용하면 됩니다.
+
+```typescript
+// main.ts
+const app = await NestFactory.create(AppModule);
+app.use(logger);
+await app.listen(3000);
+```
+
+> **팁**
+> 
+> 전역 미들웨어에서는 의존성 주입(DI) 컨테이너에 접근할 수 없습니다. 따라서, `app.use()`를 쓸 때는 **함수형 미들웨어**를 사용해야 합니다. 클래스 미들웨어를 사용해야 할 때는, `AppModule` 등의 모듈에서 `.forRoutes('*')`를 사용하여 적용하면 됩니다.
