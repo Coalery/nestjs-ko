@@ -125,3 +125,51 @@ export class AppModule implements NestModule {
 > **팁**
 > 
 > `apply()` 메서드에는 미들웨어 하나를 넘겨줄 수도 있고, [여러 미들웨어](https://docs.nestjs.com/middleware#multiple-middleware)를 넘겨줄 수도 있습니다.
+
+### 라우트 제외하기
+
+가끔, 미들웨어가 적용되는 라우트 중 특정 라우트를 **제외**하고 싶을 때가 있습니다. 이때는, `exclude()` 메서드를 사용해서 특정 라우트를 제외할 수 있습니다. 이 메서드는 제거할 라우트를 나타내는 단일 문자열, 여러 문자열, 혹은 `RouteInfo` 객체를 아래와 같이 매개변수로 넣을 수 있습니다.
+
+```typescript
+consumer
+  .apply(LoggerMiddleware)
+  .exclude(
+    { path: 'cats', method: RequestMethod.GET },
+    { path: 'cats', method: RequestMethod.POST },
+    'cats/(.*)',
+  )
+  .forRoutes(CatsController);
+```
+
+> **팁**
+> 
+> `exclude()` 메서드는 [path-to-regexp](https://github.com/pillarjs/path-to-regexp#parameters) 패키지로 와일드카드를 지원합니다.
+
+위의 예시에서 `LoggerMiddleware`는 `exclude()` 메서드로 전달된 세 라우트를 **제외**한 `CatsController`에 정의된 모든 라우트에 적용됩니다.
+
+### 함수형 미들웨어
+
+위에서 만들어본 `LoggerMiddleware` 클래스는 상당히 간단한 코드입니다. 추가적인 변수도 없고, 메서드도 없으며, 의존성도 없거든요. 그렇다면, 클래스 대신에 간단한 함수를 사용해서 미들웨어를 정의해보는 것은 어떨까요? 이러한 미들웨어를 **함수형 미들웨어(Functional Middleware)**라고 부릅니다. 그럼, `LoggerMiddleware`를 클래스 기반에서 함수형 미들웨어로 바꿔봅시다.
+
+```typescript
+// logger.middleware.ts
+import { Request, Response, NextFunction } from 'express';
+
+export function logger(req: Request, res: Response, next: NextFunction) {
+  console.log(`Request...`);
+  next();
+};
+```
+
+그리고 `AppModule`에서 써보세요.
+
+```typescript
+// app.module.ts
+consumer
+  .apply(logger)
+  .forRoutes(CatsController);
+```
+
+> **팁**
+> 
+> 만든 미들웨어가 의존성이 필요하지 않으면, 더 간단한 **함수형 미들웨어**로 바꾸는 걸 고려해보세요.
