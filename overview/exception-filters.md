@@ -131,3 +131,45 @@ Nest는 `HttpException` 클래스를 상속 받은 표준 예외를 제공합니
 - `ServiceUnavailableException`
 - `GatewayTimeoutException`
 - `PreconditionFailedException`
+
+### 예외 필터
+
+많은 경우를 기본 예외 필터가 자동으로 처리하긴 하지만, 예외 층에 대한 **완전한 조작**이 필요할 때도 있습니다. 예를 들어, 로그를 남기거나, 몇 가지의 동적인 요인을 기반으로 다른 JSON 응답을 반환하고 싶을 수도 있습니다. **예외 필터**는 그러한 상황에서 쓸 목적으로 만들어졌습니다. 예외 필터를 통해 제어의 정확한 흐름과 클라이언트에게 반환될 응답의 내용을 제어할 수 있습니다.
+
+`HttpException` 클래스의 인스턴스인 예외를 처리하는 예외 필터를 만들고, 해당 예외들에 대한 응답 로직을 구현해봅시다. 이를 위해서는, 기반 플랫폼의 `Request` 객체와 `Response` 객체에 접근할 필요가 있습니다. `Request` 객체에서는 접근하여 `url`을 가져오고, 이를 로그 정보에 포함합니다. 또, `Response` 객체에서는 `response.json()` 메서드를 이용해서 전송될 응답을 직접 처리합니다.
+
+```typescript
+// http-exception.filter.ts
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
+import { Request, Response } from 'express';
+
+@Catch(HttpException)
+export class HttpExceptionFilter implements ExceptionFilter {
+  catch(exception: HttpException, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+    const status = exception.getStatus();
+
+    response
+      .status(status)
+      .json({
+        statusCode: status,
+        timestamp: new Date().toISOString(),
+        path: request.url,
+      });
+  }
+}
+```
+
+> **팁**
+> 
+> 모든 예외 필터는 `ExceptionFilter<T>` 인터페이스를 구현해야 합니다. 그 이유는, 해당 인터페이스가 `catch(exception: T, host: ArgumentHost)` 메서드를 제공하기 때문입니다. `T`는 예외의 타입을 나타냅니다.
+
+`@Catch(HttpException)` 데코레이터는 예외 필터에 메타데이터를 붙여서, Nest에게 해당 필터가 `HttpException` 타입의 예외만 처리한다고 알려주는 역할을 합니다. `@Catch()` 데코레이터는 단일 매개변수나 반점(,)으로 구분된 매개변수들을 받을 수 있습니다. 이를 통해 여러 예외 타입에 대한 필터를 한 번에 설정할 수 있습니다.
+
+### ArgumentsHost
+
+`catch()` 메서드의 매개변수를 한 번 봅시다. `exception` 매개변수는 현재 처리할 예외 객체이고, `host` 매개변수는 `ArgumentHost`의 객체입니다. `ArgumentHost`는 강력한 유틸리티 객체이며, [실행 컨텍스트 챕터](https://docs.nestjs.com/fundamentals/execution-context)*에서 더 자세히 설명합니다. 위의 예시에서는, 예외가 발생한 컨트롤러의 요청 핸들러에 들어오는 `Request` 객체와 `Response` 객체를 가져오기 위해 `ArgumentsHost`의 헬퍼 메서드를 사용했습니다. `ArgumentsHost`의 자세한 설명은 [여기](https://docs.nestjs.com/fundamentals/execution-context)를 참고하세요.
+
+\* 이렇게 추상화를 한 이유는, `ArgumentsHost`가 모든 컨텍스트에서 동작하기 때문입니다. 위에서 나왔던 HTTP 서버에서도 잘 동작하고, 그 외에 마이크로서비스, 웹소켓에서도 동작합니다. 실행 컨텍스트 챕터에서는 **어느** 실행 컨텍스트에서든 `ArgumentsHost`와 헬퍼 함수로 적절한 [기반 인수](https://docs.nestjs.com/fundamentals/execution-context#host-methods)에 접근하는 방법을 알아볼 것입니다. 이를 통해 어떤 컨텍스트에서든 잘 동작하는 포괄적인 예외 필터를 만들 수 있습니다.
