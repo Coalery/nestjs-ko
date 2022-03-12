@@ -83,3 +83,51 @@ async findAll() {
   "error": "This is a custom message"
 }
 ```
+
+### 사용자 지정 예외
+
+대부분의 경우, 사용자 지정 예외를 만들 필요는 없고, 다음 섹션에서 설명하는 Nest 내장 HTTP 예외를 사용하면 됩니다. 만약 사용자 지정 예외를 만들어야만 한다면, `HttpException` 클래스를 상속받은 사용자 지정 예외들이 위치할 <strong>예외 디렉터리(Exception Hierarchy)</strong>를 만드는 것이 좋습니다. 이렇게 하면, Nest가 예외를 인식해서 자동으로 에러에 대한 응답을 처리하게 됩니다. 아래와 같은 사용자 지정 예외를 만들어봅시다.
+
+```typescript
+// forbidden.exception.ts
+export class ForbiddenException extends HttpException {
+  constructor() {
+    super('Forbidden', HttpStatus.FORBIDDEN);
+  }
+}
+```
+
+`ForbiddenException`이 `HttpException` 클래스를 상속 받았기 때문에, Nest에 내장된 예외 처리기가 원활하게 처리할 수 있습니다. 그러므로, 이 예외를 `findAll()` 메서드 내에서도 쓸 수 있게 됩니다.
+
+```typescript
+// cats.controller.ts
+@Get()
+async findAll() {
+  throw new ForbiddenException();
+}
+```
+
+### 내장된 HTTP 예외들
+
+Nest는 `HttpException` 클래스를 상속 받은 표준 예외를 제공합니다. 이들은 `@nestjs/common` 패키지에서 찾을 수 있으며, 대부분의 일반적인 HTTP 예외들은 아래와 같이 이미 구현되어 있습니다.
+
+- `BadRequestException`
+- `UnauthorizedException`
+- `NotFoundException`
+- `ForbiddenException`
+- `NotAcceptableException`
+- `RequestTimeoutException`
+- `ConflictException`
+- `GoneException`
+- `HttpVersionNotSupportedException`
+- `PayloadTooLargeException`
+- `UnsupportedMediaTypeException`
+- `UnprocessableEntityException`
+- `InternalServerErrorException`
+- `NotImplementedException`
+- `ImATeapotException`
+- `MethodNotAllowedException`
+- `BadGatewayException`
+- `ServiceUnavailableException`
+- `GatewayTimeoutException`
+- `PreconditionFailedException`
