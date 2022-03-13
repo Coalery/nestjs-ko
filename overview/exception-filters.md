@@ -4,7 +4,7 @@ description: "원문 : https://docs.nestjs.com/exception-filters"
 
 # Exception filters
 
-Nest는 어플리케이션의 모든 처리되지 않은 예외를 처리하는 역할을 하는 <strong>예외 층(Exceptions Layer)</strong>를 갖고 있습니다. 어플리케이션 코드에서 예외가 처리되지 않았을 때, 해당 예외가 예외 층에서 잡혀서, 자동으로 적당한 유저 친화적 응답을 전송합니다.
+Nest는 어플리케이션의 모든 처리되지 않은 예외를 처리하는 역할을 하는 <strong>예외 층(Exceptions Layer)</strong>을 갖고 있습니다. 어플리케이션 코드에서 예외가 처리되지 않았을 때, 해당 예외가 예외 층에서 잡혀서, 자동으로 적당한 유저 친화적 응답을 전송합니다.
 
 ![Filter_1.png](https://docs.nestjs.com/assets/Filter_1.png)
 
@@ -260,7 +260,7 @@ export class AppModule {}
 
 예외의 타입과 상관 없이 **모든** 처리되지 않은 예외를 처리하려면, `@Catch()` 데코레이터의 매개변수 리스트를 빈 상태로 두면 됩니다.
 
-아래의 예시에서는, 클라이언트에게 응답을 전달하기 위해 [HTTP adapter](https://docs.nestjs.com/faq/http-adapter)를 사용하여 플랫폼에 독립적인 코드를 만들었으며, `Request`나 `Response`와 같이 특정 플랫폼에 대한 객체는 사용하지 않았습니다.
+아래의 예시에서는 클라이언트에게 응답을 전달하기 위해 [HTTP adapter](https://docs.nestjs.com/faq/http-adapter)를 사용하여 플랫폼에 독립적인 코드를 만들었으며, `Request`나 `Response`와 같이 특정 플랫폼에 대한 객체는 사용하지 않았습니다.
 
 ```typescript
 import {
