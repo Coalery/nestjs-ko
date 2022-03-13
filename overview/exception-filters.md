@@ -173,3 +173,128 @@ export class HttpExceptionFilter implements ExceptionFilter {
 `catch()` 메서드의 매개변수를 한 번 봅시다. `exception` 매개변수는 현재 처리할 예외 객체이고, `host` 매개변수는 `ArgumentHost`의 객체입니다. `ArgumentHost`는 강력한 유틸리티 객체이며, [실행 컨텍스트 챕터](https://docs.nestjs.com/fundamentals/execution-context)*에서 더 자세히 설명합니다. 위의 예시에서는, 예외가 발생한 컨트롤러의 요청 핸들러에 들어오는 `Request` 객체와 `Response` 객체를 가져오기 위해 `ArgumentsHost`의 헬퍼 메서드를 사용했습니다. `ArgumentsHost`의 자세한 설명은 [여기](https://docs.nestjs.com/fundamentals/execution-context)를 참고하세요.
 
 \* 이렇게 추상화를 한 이유는, `ArgumentsHost`가 모든 컨텍스트에서 동작하기 때문입니다. 위에서 나왔던 HTTP 서버에서도 잘 동작하고, 그 외에 마이크로서비스, 웹소켓에서도 동작합니다. 실행 컨텍스트 챕터에서는 **어느** 실행 컨텍스트에서든 `ArgumentsHost`와 헬퍼 함수로 적절한 [기반 인수](https://docs.nestjs.com/fundamentals/execution-context#host-methods)에 접근하는 방법을 알아볼 것입니다. 이를 통해 어떤 컨텍스트에서든 잘 동작하는 포괄적인 예외 필터를 만들 수 있습니다.
+
+### 필터 적용하기
+
+이제 `HttpExceptionFilter`를 `CatsController`의 `create()` 메서드에 적용시켜봅시다.
+
+```typescript
+// cats.controller.ts
+@Post()
+@UseFilters(new HttpExceptionFilter())
+async create(@Body() createCatDto: CreateCatDto) {
+  throw new ForbiddenException();
+}
+```
+
+> **팁**
+> 
+> `@UseFilter()` 데코레이터는 `@nestjs/common` 패키지에 있습니다.
+
+여기서는 `@UseFilters()` 데코레이터를 사용했습니다. `@Catch()` 데코레이터와 유사하게, 단일 필터 인스턴스나 반점(,)으로 구분된 필터 인스턴스들의 리스트를 넣을 수 있습니다. 위의 예시에서는 `HttpExceptionFilter`의 인스턴스를 만들어서 넣었습니다. 또는 인스턴스 대신에 클래스를 전달해서, 프레임워크에게 인스턴스화의 역할을 맡기고 **의존성 주입**을 가능하게도 만들 수 있습니다.
+
+```typescript
+// cats.controller.ts
+@Post()
+@UseFilters(HttpExceptionFilter)
+async create(@Body() createCatDto: CreateCatDto) {
+  throw new ForbiddenException();
+}
+```
+
+> **팁**
+> 
+> 웬만하면 인스턴스 대신 클래스를 쓰는게 더 낫습니다. Nest가 같은 클래스의 인스턴스를 전체 모듈에서 재사용하여 메모리 사용량을 줄일 수 있기 때문입니다.
+
+위의 예시에서는, `HttpExceptionFilter`를 `create()`라는 하나의 라우트 핸들러에 적용하여, 필터를 메서드 수준(method-scoped)에서 사용하였습니다. 예외 필터는 여러 다른 수준(메서드, 컨트롤러, 전역)에서 사용할 수 있습니다. 예를 들어, 컨트롤러 수준에서 필터를 적용하려면 아래와 같이 하면 됩니다.
+
+```typescript
+// cats.controller.ts
+@UseFilters(new HttpExceptionFilter())
+export class CatsController {}
+```
+
+위와 같이 하면, `CatsController` 내에 정의된 모든 라우트 핸들러에 `HttpExceptionFilter`를 적용할 수 있습니다.
+
+전역 수준 필터를 적용하려면, 아래와 같이 하면 됩니다.
+
+```typescript
+// main.ts
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalFilters(new HttpExceptionFilter());
+  await app.listen(3000);
+}
+bootstrap();
+```
+
+> **주의**
+> 
+> `useGlobalFilters()` 메서드는 게이트웨이나 하이브리드 어플리케이션에 대해서는 필터를 적용하지 않습니다.
+
+전역 수준 필터는 전체 어플리케이션, 즉 모든 컨트롤러와 모든 라우트 핸들러에 적용됩니다. 하지만, 위의 `useGlobalFilters()`를 사용한 예시처럼 모듈 밖에서 등록된 전역 필터는 말 그대로 모듈 밖의 컨텍스트에서 완료되었기 때문에, 의존성을 주입할 수 없게 됩니다. 이 문제를 해결하려면, 아래와 같이 모듈에 직접 전역 수준 필터를 등록하면 됩니다.
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
+
+@Module({
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+> **팁**
+> 
+> 위와 같이 필터에 대한 의존성 주입을 시행하면, 위의 구문이 어디있던 상관 없이 필터는 전역으로 설정됩니다. 또한, `useClass`만이 사용자 지정 프로바이더를 등록하는 유일한 방법인 것은 아닙니다. 자세한 건 [여기](https://docs.nestjs.com/fundamentals/custom-providers)를 참고하세요.
+
+위의 방법을 사용하여 필요한 만큼 필터를 추가할 수 있습니다. 각각을 `providers` 배열에 추가하기만 하면 됩니다.
+
+### 모든 예외 처리하기
+
+예외의 타입과 상관 없이 모든 처리되지 않은 예외를 처리하려면, `@Catch()` 데코레이터의 매개변수 리스트를 빈 상태로 두면 됩니다.
+
+아래의 예시에서는, 클라이언트에게 응답을 전달하기 위해 [HTTP adapter](https://docs.nestjs.com/faq/http-adapter)를 사용하여 플랫폼에 독립적인 코드를 만들었으며, `Request`나 `Response`와 같이 특정 플랫폼에 대한 객체는 사용하지 않았습니다.
+
+```typescript
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+import { HttpAdapterHost } from '@nestjs/core';
+
+@Catch()
+export class AllExceptionsFilter implements ExceptionFilter {
+  constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
+
+  catch(exception: unknown, host: ArgumentsHost): void {
+    // In certain situations `httpAdapter` might not be available in the
+    // constructor method, thus we should resolve it here.
+    const { httpAdapter } = this.httpAdapterHost;
+
+    const ctx = host.switchToHttp();
+
+    const httpStatus =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const responseBody = {
+      statusCode: httpStatus,
+      timestamp: new Date().toISOString(),
+      path: httpAdapter.getRequestUrl(ctx.getRequest()),
+    };
+
+    httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
+  }
+}
+```
