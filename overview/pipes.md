@@ -109,3 +109,52 @@ async findOne(@Param('uuid', new ParseUUIDPipe()) uuid: string) {
 > **팁**
 > 
 > 더 많은 검증 파이프의 예시는 [여기](https://docs.nestjs.com/techniques/validation)를 참고해주세요.
+
+### 사용자 지정 파이프
+
+위에서 언급했듯이, 자신만의 파이프도 만들 수 있습니다. Nest에서 `ParseIntPipe`나 `ValidationPipe`를 제공하긴 하지만, 각각의 간단한 버전을 만들어보면서 어떻게 처음부터 파이프를 만드는지 알아봅시다.
+
+간단한 `ValidationPipe`로 시작해보겠습니다. 처음에는, 항등 함수처럼 입력값을 받아서 그대로 반환하는 파이프로 시작합니다.
+
+```typescript
+// validation.pipe.ts
+import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
+
+@Injectable()
+export class ValidationPipe implements PipeTransform {
+  transform(value: any, metadata: ArgumentMetadata) {
+    return value;
+  }
+}
+```
+
+> **팁**
+> 
+> `PipeTransform<T, R>`는 모든 파이프가 구현해야 하는 제너릭 인터페이스입니다. `T`는 입력되는 `value`의 타입, `R`은 `transform()` 메서드의 반환 타입을 나타냅니다.
+
+모든 파이프는 `PipeTransform` 인터페이스의 조건을 만족시키기 위해 `transform()` 메서드를 구현해야 합니다. 해당 메서드는 아래의 두 가지 매개변수를 가지고 있습니다.
+
+- `value`
+- `metadata`
+
+`value`는 라우트 핸들러에 넘겨주기 전의, 현재 처리되는 메서드에 들어오는 인수(argument)입니다. 또, `metadata`는 현재 처리되는 메서드 인수의 메타데이터입니다. 메타데이터 객체는 아래의 속성들을 갖습니다.
+
+```typescript
+export interface ArgumentMetadata {
+  type: 'body' | 'query' | 'param' | 'custom';
+  metatype?: Type<unknown>;
+  data?: string;
+}
+```
+
+위 속성들은 현재 처리되는 인수들을 나타냅니다.
+
+|속성|설명|
+|:---|:---|
+|`type`|인수가 `@Body()`인지, `@Query()`인지, `@Param()`인지, 혹은 사용자 지정 매개변수인지를 나타냅니다. 더 자세한 내용은 [여기](https://docs.nestjs.com/custom-decorators)를 참고해주세요.|
+|`metatype`|`String`처럼 인수의 메타타입을 나타냅니다. 이 값은 라우트 메서드의 시그니처에 타입 선언이 되어있지 않거나, 바닐라 자바스크립트를 쓸 때 `undefined`이 됩니다.|
+|`data`|`@Body('string')`에서 `'string'`처럼 데코레이터에 전달된 문자열을 나타냅니다. 아무 값도 안 넣어주면 `undefined`이 됩니다.|
+
+> **주의**
+> 
+> 타입스크립트의 인터페이스는 트랜스파일 과정에서 사라집니다. 그러므로, 메서드 매개변수의 타입이 클래스 대신에 인터페이스로 선언되어 있다면 `metatype`의 값은 `Object`가 됩니다.
