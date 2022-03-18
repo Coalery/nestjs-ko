@@ -188,3 +188,40 @@ export class CreateCatDto {
 검증 미들웨어를 만드는 것은 어떨까요? 동작은 하겠지만, 전체 어플리케이션의 모든 컨텍스트에서 사용할 수 있는 **일반적인 미들웨어**로 만드는 건 불가능할 겁니다. 이는 미들웨어가 핸들러나 매개변수에 대한 정보를 가진 **실행 컨텍스트**에 접근할 수 없기 때문입니다.
 
 눈치채셨겠지만, 이것이 파이프가 만들어진 이유입니다. 그럼, 이제 검증 파이프를 개선하러 가봅시다!
+
+### 객체 스키마 검증
+
+객체를 깔끔하고 [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself)하게 검증하는 몇 개의 방법이 있습니다. 그 중 일반적인 방법은, **스키마 기반** 검증을 사용하는 것입니다. 이 방법을 써봅시다.
+
+[Joi](https://github.com/sideway/joi) 라이브러리를 사용하면, 읽기 쉬운 API로 간단하게 스키마를 만들 수 있습니다. Joi 기반 스키마를 사용해서 검증 파이프를 만들어봅시다.
+
+먼저, 필요한 패키지를 설치합니다.
+
+```shell
+$ npm install --save joi
+$ npm install --save-dev @types/joi
+```
+
+아래의 예시 코드에서는, `constructor`의 인수로 스키마를 가져오는 간단한 클래스를 만들었습니다. 그런 다음, `schema.validate()` 메서드로 지정 스키마에 대해서 들어온 인수를 검증합니다.
+
+위에서 말했듯이, **검증 파이프**는 변하지 않은 값을 반환하거나, 예외를 발생시킵니다.
+
+다음 섹션에서는, 어떻게 `@UsePipes()` 데코레이터로 주어진 컨트롤러 메서드의 적절한 스키마를 가져오는지 알아볼 것입니다. 이를 이용하면, 모든 컨텍스트에서 검증 파이프를 재사용할 수 있게 됩니다.
+
+```typescript
+import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
+import { ObjectSchema } from 'joi';
+
+@Injectable()
+export class JoiValidationPipe implements PipeTransform {
+  constructor(private schema: ObjectSchema) {}
+
+  transform(value: any, metadata: ArgumentMetadata) {
+    const { error } = this.schema.validate(value);
+    if (error) {
+      throw new BadRequestException('Validation failed');
+    }
+    return value;
+  }
+}
+```
