@@ -158,3 +158,33 @@ export interface ArgumentMetadata {
 > **주의**
 > 
 > 타입스크립트의 인터페이스는 트랜스파일 과정에서 사라집니다. 그러므로, 메서드 매개변수의 타입이 클래스 대신에 인터페이스로 선언되어 있다면 `metatype`의 값은 `Object`가 됩니다.
+
+### 스키마 기반 검증
+
+검증 파이프를 더 쓸모 있게 만들어봅시다. `CatsController`의 `create()` 메서드를 더 자세히 살펴보세요! 여기서, 서비스의 메서드를 실행하기 전에 POST의 바디 객체가 유효한지 확인하려 합니다.
+
+```typescript
+@Post()
+async create(@Body() createCatDto: CreateCatDto) {
+  this.catsService.create(createCatDto);
+}
+```
+
+위 코드에서, 바디 매개변수 `createCatDto`의 타입은 `CreateCatDto` 클래스입니다. 해당 클래스는 아래와 같이 생겼습니다.
+
+```typescript
+// create-cat.dto.ts
+export class CreateCatDto {
+  name: string;
+  age: number;
+  breed: string;
+}
+```
+
+`create` 메서드로 들어오는 요청이 유효한 바디를 갖는 걸 보장하게 하려면, `createCatDto` 객체의 세 멤버를 확인해봐야 합니다. 물론, 라우트 핸들러 메서드 안에서 처리할 수도 있겠지만 <strong>단일 책임 원칙(Single Responsibility Rule, SRP)</strong>을 깨뜨리기 때문에 이상적인 방법이 아닙니다.
+
+다른 방법으로는, **검증 클래스**를 만들어서 검증 역할을 위임하는 방법이 있습니다. 하지만, 이 경우에는 각각의 메서드 시작 부분에서 계속 검증 클래스를 호출해야 하는 단점이 있습니다.
+
+검증 미들웨어를 만드는 것은 어떨까요? 동작은 하겠지만, 전체 어플리케이션의 모든 컨텍스트에서 사용할 수 있는 **일반적인 미들웨어**로 만드는 건 불가능할 겁니다. 이는 미들웨어가 핸들러나 매개변수에 대한 정보를 가진 **실행 컨텍스트**에 접근할 수 없기 때문입니다.
+
+눈치채셨겠지만, 이것이 파이프가 만들어진 이유입니다. 그럼, 이제 검증 파이프를 개선하러 가봅시다!
