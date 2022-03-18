@@ -202,7 +202,7 @@ $ npm install --save joi
 $ npm install --save-dev @types/joi
 ```
 
-아래의 예시 코드에서는, `constructor`의 인수로 스키마를 가져오는 간단한 클래스를 만들었습니다. 그런 다음, `schema.validate()` 메서드로 지정 스키마에 대해서 들어온 인수를 검증합니다.
+아래의 예시 코드에서는, `constructor`의 인수로 스키마를 가져와서 `schema.validate()` 메서드로 주어진 스키마에 대해 들어온 인수를 검증합니다.
 
 위에서 말했듯이, **검증 파이프**는 변하지 않은 값을 반환하거나, 예외를 발생시킵니다.
 
