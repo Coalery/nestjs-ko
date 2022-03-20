@@ -225,3 +225,122 @@ export class JoiValidationPipe implements PipeTransform {
   }
 }
 ```
+
+### 검증 파이프 적용하기
+
+앞서 `ParseIntPipe`나 그 외 `Parse*` 파이프 등, 변형 파이프를 어떻게 적용하는지 살펴봤습니다.
+
+검증 파이프 적용도 간단합니다.
+
+먼저, 메서드 수준으로 파이프를 적용해보겠습니다. 현재의 예시에서 `JoiValidationPipe`를 사용하려면 아래의 일을 해야합니다.
+
+1. `JoiValidationPipe`의 인스턴스를 만듭니다.
+2. 파이프의 생성자에 특정 컨텍스트에 대한 Joi 스키마를 넘겨줍니다.
+3. 파이프를 메서드에 적용시킵니다.
+
+아래와 같이 `@UsePipes()` 데코레이터를 사용하여 위의 일을 수행할 수 있습니다.
+
+```typescript
+@Post()
+@UsePipes(new JoiValidationPipe(createCatSchema))
+async create(@Body() createCatDto: CreateCatDto) {
+  this.catsService.create(createCatDto);
+}
+```
+
+> **팁**
+> 
+> `@UsePipes()` 데코레이터는 `@nestjs/common` 패키지에서 가져올 수 있습니다.
+
+### Class Validator
+
+> **주의**
+> 
+> 이 섹션에서 소개하는 기술은 타입스크립트가 필요합니다. 만약 어플리케이션이 바닐라 자바스크립트로 작성되었다면 아래 기술은 사용할 수 없습니다.
+
+앞서 소개한 검증 기술의 대체제를 살펴보겠습니다.
+
+Nest는 [class-validator](https://github.com/typestack/class-validator)과 잘 작동합니다. 해당 라이브러리를 사용하면, 데코레이터 기반 검증을 할 수 있게 됩니다. 데코레이터 기반 검증은, 처리되는 속성의 메타타입에 접근할 수 있는 Nest의 파이프와 맞물려 동작할 때 매우 유용합니다. 시작하기 전에, 아래의 명령어를 실행하여 필요한 패키지를 설치해야합니다.
+
+```shell
+$ npm i --save class-validator class-transformer
+```
+
+설치하면, `CreateCatDto` 클래스에 몇 개의 데코레이터를 추가할 수 있게 됩니다. 이것이 이 기술의 중요한 장점인데, 따로 검증 클래스를 만들 필요 없이 `CreateCatDto` 클래스 하나만으로 POST 요청의 바디를 관리할 수 있게 됩니다.
+
+```typescript
+// create-cat.dto.ts
+import { IsString, IsInt } from 'class-validator';
+
+export class CreateCatDto {
+  @IsString()
+  name: string;
+
+  @IsInt()
+  age: number;
+
+  @IsString()
+  breed: string;
+}
+```
+
+> **팁**
+> 
+> `class-validator`의 다른 데코레이터를 살펴보려면 [여기](https://github.com/typestack/class-validator#usage)를 참고하세요.
+
+이제, 위의 데코레이터들을 활용하는 `ValidationPipe` 클래스를 만들 수 있게 되었습니다.
+
+```typescript
+// validation.pipe.ts
+import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
+import { validate } from 'class-validator';
+import { plainToClass } from 'class-transformer';
+
+@Injectable()
+export class ValidationPipe implements PipeTransform<any> {
+  async transform(value: any, { metatype }: ArgumentMetadata) {
+    if (!metatype || !this.toValidate(metatype)) {
+      return value;
+    }
+    const object = plainToClass(metatype, value);
+    const errors = await validate(object);
+    if (errors.length > 0) {
+      throw new BadRequestException('Validation failed');
+    }
+    return value;
+  }
+
+  private toValidate(metatype: Function): boolean {
+    const types: Function[] = [String, Boolean, Number, Array, Object];
+    return !types.includes(metatype);
+  }
+}
+```
+
+> **알림**
+> 
+> 위의 예시에서 **class-transformer** 라이브러리를 사용했습니다. 해당 라이브러리는 **class-validator** 라이브러리와 같은 사람이 만들었기 때문에, 두 라이브러리는 서로 잘 맞물려서 동작합니다.
+
+이제 위의 코드를 잘 살펴보겠습니다. 먼저, `transform()` 메서드에 `async`가 붙어있는 걸 주목해주세요. Nest는 동기 파이프와 **비동기** 파이프 둘 다 지원하기 때문에, 위와 같이 `async`를 사용한 비동기 파이프도 만들 수 있습니다. 해당 메서드를 비동기로 만든 이유는, 몇 개의 class-validator을 통한 검증이 [비동기로 처리](https://github.com/typestack/class-validator#custom-validation-classes)될 수 있기 때문입니다.
+
+다음으로 주목해야 하는 부분은, 구조 분해(Destructuring)를 사용해서 `ArgumentMetadata`의 멤버 중 metatype 필드를 `metatype` 매개변수로 추출했다는 점입니다. 이는 `ArgumentMetadata`를 완전히 가져와서, 추가적으로 메타타입을 할당하는 과정을 줄여서 간단하게 쓴 것입니다.
+
+그 다음, `toValidate()` 헬퍼 함수를 봐주세요. 이는, 현재 처리되는 변수가 네이티브 자바스크립트 타입일 때, 검증 과정을 넘겨버리는 역할을 합니다. 이들은 검증 데코레이터를 붙일 수 없으므로, 굳이 검증 과정을 거칠 필요가 없으므로 넘기는 것입니다.
+
+또, 검증 과정을 거치기 위해선 기본 자바스크립트 객체를 타입이 있는 객체(typed object)로 변환해야 합니다. 이를 위해 `class-transformer` 라이브러리의 `plainToClass()` 함수를 사용하였습니다. 이렇게 하는 이유는, 네트워크 요청으로부터 바디를 역직렬화 할 때, 들어오는 POST 바디 객체에 대한 **타입 정보가 없기** 때문입니다. 하지만 `class-validator`를 통해 검증하려면 앞서 DTO에서 정의한 검증 데코레이터가 필요합니다. 즉, 들어오는 바디를 기본 바닐라 객체가 아닌 적절한 데코레이터가 붙어있는(decorated) 객체로 처리할 수 있도록 변환해주어야 바디 객체를 검증할 수 있다는 것입니다.
+
+마지막으로, 앞서 언급했듯이 **검증 파이프**는 변하지 않은 값을 반환하거나 예외를 발생시킵니다.
+
+이제, `ValidationPipe`를 적용시켜 봅시다. 파이프는 매개변수 수준, 메서드 수준, 컨트롤러 수준, 전역 수준에 적용시킬 수 있습니다. 앞서 나왔던 Joi 기반 검증 파이프는 메서드 수준에 파이프를 적용한 예시였습니다. 아래의 예시에서는, 파이프 인스턴스를 라우트 핸들러의 `@Body()` 데코레이터에 적용하여 POST 바디를 검증하도록 만들었습니다.
+
+```typescript
+// cats.controller.ts
+@Post()
+async create(
+  @Body(new ValidationPipe()) createCatDto: CreateCatDto,
+) {
+  this.catsService.create(createCatDto);
+}
+```
+
+매개변수 수준의 파이프는 특정 매개변수에 검증 로직을 적용할 때 유용합니다.
