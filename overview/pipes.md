@@ -344,3 +344,49 @@ async create(
 ```
 
 매개변수 수준의 파이프는 특정 매개변수에 검증 로직을 적용할 때 유용합니다.
+
+### 전역 수준 파이프
+
+`ValidationPipe`를 최대한 일반적으로 구현하였기 때문에, 해당 파이프를 전체 어플리케이션의 모든 라우트 핸들러에 적용되는 **전역 수준** 파이프로 등록할 수 있습니다.
+
+```typescript
+// main.ts
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new ValidationPipe());
+  await app.listen(3000);
+}
+bootstrap();
+```
+
+> **알림**
+> 
+> [하이브리드 어플리케이션](https://docs.nestjs.com/faq/hybrid-application)의 경우, `useGlobalPipes()`로는 게이트웨이와 마이크로서비스에 파이프를 등록할 수 없습니다. 대신, 하이브리드가 아닌 "표준" 마이크로서비스 어플리케이션에는 `useGlobalPipes()`로 전역 파이프를 등록할 수 있습니다.
+
+전역 파이프는 전체 어플리케이션의 모든 컨트롤러, 모든 라우트 핸들러에 적용됩니다.
+
+위의 예시처럼 모듈 밖에서 `useGlobalPipes()`로 전역 파이프를 등록하면, 적용이 이미 모듈 외부의 컨텍스트에서 끝났기 때문에 의존성 주입이 불가능합니다. 이 문제를 해결하려면, 전역 파이프를 아래처럼 모듈에 직접 설정하면 됩니다.
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { APP_PIPE } from '@nestjs/core';
+
+@Module({
+  providers: [
+    {
+      provide: APP_PIPE,
+      useClass: ValidationPipe,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+> **팁**
+> 
+> 파이프가 의존성 주입이 되도록 위와 같이 만들면, 어떤 모듈에서 설정했던 파이프는 전역이 됩니다. 따라서, 전역 파이프를 따로 선언하는 모듈을 따로 두시는 게 좋습니다. 또한, `useClass`는 사용자 지정 프로바이더를 등록하는 유일한 방법이 아닙니다. 자세한 건 [여기](https://docs.nestjs.com/fundamentals/custom-providers)를 참고하세요.
+
+### 빌트인 ValidationPipe
+
+위에서 언급했듯이, Nest가 `ValidationPipe`를 기본적으로 제공하기 때문에, 굳이 일반적인 검증 파이프를 직접 구현할 필요는 없습니다. 빌트인 `ValidationPipe`는 이번 챕터에서 만든 샘플보다 더 많은 옵션를 제공하며, 만들어본 샘플은 그저 사용자 지정 파이프의 매커니즘을 설명하기 위해 만든 것일 뿐입니다. 자세한 건 [여기](https://docs.nestjs.com/techniques/validation)를 참고해주세요.
