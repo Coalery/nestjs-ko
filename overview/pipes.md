@@ -390,3 +390,61 @@ export class AppModule {}
 ### 빌트인 ValidationPipe
 
 위에서 언급했듯이, Nest가 `ValidationPipe`를 기본적으로 제공하기 때문에, 굳이 일반적인 검증 파이프를 직접 구현할 필요는 없습니다. 빌트인 `ValidationPipe`는 이번 챕터에서 만든 샘플보다 더 많은 옵션를 제공하며, 만들어본 샘플은 그저 사용자 지정 파이프의 매커니즘을 설명하기 위해 만든 것일 뿐입니다. 자세한 건 [여기](https://docs.nestjs.com/techniques/validation)를 참고해주세요.
+
+### 변형 파이프 사용 예시
+
+검증 파이프만이 커스텀 파이프의 사용 예시인 것은 아닙니다. 이 챕터를 시작할 때, 파이프는 입력 데이터를 원하는 형태로 **변형**할 수도 있다고 언급했습니다. 이는 `transform` 함수의 반환 값이 이전의 인수 값을 완전하게 덮어쓰기 때문에 가능합니다.
+
+이건 언제 유용할까요? 클라이언트에서 전달된 데이터가 라우트 핸들러 메서드로 들어가기 전에, 문자열을 정수로 변환하는 등의 변형이 필요한 경우를 생각해보세요! 아니면 어떤 필수 필드의 데이터가 들어오지 않았을 때 기본값을 적용하고 싶을 때도 있을 것입니다. **변형 파이프**는 클라이언트 요청과 요청 핸들러 사이에 끼어들어서 이러한 기능들을 수행합니다.
+
+여기, 문자열을 정수값으로 변환하는 간단한 `ParseIntPipe`가 있습니다. 물론 위에서 보았듯이 Nest는 더 정교한 빌트인 `ParseIntPipe`를 갖고 있습니다. 아래의 파이프는 그저 커스텀 변형 파이프의 간단한 예시를 보여주기 위함입니다.
+
+```typescript
+// parse-int.pipe.ts
+import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
+
+@Injectable()
+export class ParseIntPipe implements PipeTransform<string, number> {
+  transform(value: string, metadata: ArgumentMetadata): number {
+    const val = parseInt(value, 10);
+    if (isNaN(val)) {
+      throw new BadRequestException('Validation failed');
+    }
+    return val;
+  }
+}
+```
+
+이제, 아래와 같이 매개변수에 변형 파이프를 적용해봅시다.
+
+```typescript
+@Get(':id')
+async findOne(@Param('id', new ParseIntPipe()) id) {
+  return this.catsService.findOne(id);
+}
+```
+
+다른 변형 파이프의 유용한 예시는, 요청으로 들어온 아이디를 통해 데이터베이스에서 **기존 유저** 엔티티를 가져오는 것입니다.
+
+```typescript
+@Get(':id')
+findOne(@Param('id', UserByIdPipe) userEntity: UserEntity) {
+  return userEntity;
+}
+```
+
+`UserByIdPipe`의 구현은 독자의 몫으로 남겨두겠습니다. 이 파이프도 다른 모든 변형 파이프들과 마찬가지로, 입력값(`id`)을 받아서 출력값(`UserEntity`)을 반환한다는 것만 기억하시면 됩니다. 이는 보일러플레이터 코드를 핸들러에서 꺼내서 일반적인 파이프로 만듦으로써, 코드를 더 선언적이고 [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself)하게 만들 수 있습니다.
+
+### 기본값 설정
+
+`Parse*` 파이프들은 `null`이나 `undefined` 값을 받으면 예외를 발생시기 때문에, 해당 파이프들을 사용하려면, 매개변수의 값이 정의되어 있어야 합니다. 만약 쿼리스트링 매개변수의 값이 없더라도 정상적으로 처리되게 하려면, `Parse*` 파이프가 해당 값들을 처리하기 전에 주입할 기본 값을 제공해야 합니다. 이를 위한 것이 바로 `DefaultValuePipe`입니다. 다음과 같이 관련 있는 `Parse*` 파이프 앞에 `DefaultValuePipe`를 두면 됩니다.
+
+```typescript
+@Get()
+async findAll(
+  @Query('activeOnly', new DefaultValuePipe(false), ParseBoolPipe) activeOnly: boolean,
+  @Query('page', new DefaultValuePipe(0), ParseIntPipe) page: number,
+) {
+  return this.catsService.findAll({ activeOnly, page });
+}
+```
