@@ -15,3 +15,34 @@ description: "원문 : https://docs.nestjs.com/guards"
 > **팁**
 > 
 > 가드는 미들웨어 **이후**, 그리고 인터셉터와 파이프 **이전**에 실행됩니다.
+
+### 인가 가드
+
+언급했듯이, 어떤 특정 라우트는 요청자가 충분한 권한을 갖고 있을 때에만 실행되어야 할 때가 있습니다. 그러므로, **인가**는 가드의 좋은 예시라고 볼 수 있습니다. 지금부터 만들 `AuthGuard`는 요청 헤더에 토큰이 붙어있는, 인증된 유저를 가정합니다. 토큰을 가져와서 검증하고, 추출한 정보를 사용하여 해당 요청이 실행될 수 있는지 아닌지를 결정합니다.
+
+```typescript
+// auth.guard.ts
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Observable } from 'rxjs';
+
+@Injectable()
+export class AuthGuard implements CanActivate {
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | Observable<boolean> {
+    const request = context.switchToHttp().getRequest();
+    return validateRequest(request);
+  }
+}
+```
+
+> **팁**
+> 
+> 만약 인증(Authentication) 메커니즘을 실제로 어떻게 구현하는지가 궁금하다면, [이 챕터](https://docs.nestjs.com/security/authentication)를 참고하세요. 또한, 더 복잡한 인가(Authorization) 예제는 [이 페이지](https://docs.nestjs.com/security/authorization)를 참고해주세요.
+
+`validateRequest()` 함수 내의 로직은 필요에 따라 간단해질 수도 있고 복잡해질 수도 있습니다. 이 예제의 요점은, 가드가 어떻게 요청/응답 사이클에 들어갈 수 있느냐입니다.
+
+모든 가드는 `canActivate()` 함수를 구현해야 합니다. 이 함수는 현재 요청을 허가할지 안 할지를 나타내는 boolean을 반환하며, 이는 동기적으로도 가능하고, `Promise`와 `Observable`를 통해 비동기적으로도 가능합니다. Nest는 반환된 값을 통해 가드 다음에 할 작업을 결정합니다.
+
+- `true`를 반환하면, 요청이 처리됩니다.
+- `false`를 반환하면, Nest가 해당 요청을 거절합니다.
