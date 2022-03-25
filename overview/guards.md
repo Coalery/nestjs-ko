@@ -46,3 +46,28 @@ export class AuthGuard implements CanActivate {
 
 - `true`를 반환하면, 요청이 처리됩니다.
 - `false`를 반환하면, Nest가 해당 요청을 거절합니다.
+
+### 실행 컨텍스트
+
+`canActivate()` 함수는 단 하나의 인수로, `ArgumentsHost`를 상속 받은 `ExecutionContext` 인스턴스를 받습니다. `ArgumentsHost`는 저번에 예외 필터 챕터에서 본 적이 있을겁니다. 위 예제에서는, `Request`객체에 대한 참조를 가져오기 위해 `ArgumentsHost`의 헬퍼 메서드를 사용하고 있으며, 이는 이전에도 동일한 이유로 사용해봤습니다. 기억이 안나신다면, [예외 필터](https://docs.nestjs.com/exception-filters#arguments-host)챕터의 **Arguments host** 부분을 참고해주세요.
+
+`ArgumentsHost`를 확장함으로써 `ExecutionContext`도 현재의 실행 과정에 대한 추가적인 정보를 제공하는 몇 개의 헬퍼 메서드를 갖고 있습니다. 이 정보를 활용해서 여러 컨트롤러, 메서드, 실행 컨텍스트 등 광범위하게 작동할 수 있는 일반적인(generic) 가드를 만들 수 있습니다. `ExecutionContext`에 대한 자세한 내용은 [여기](https://docs.nestjs.com/fundamentals/execution-context)를 참고해주세요.
+
+### 역할 기반(Role-based) 인증
+
+이제 좀 더 실용적으로, 특정 역할을 갖고 있는 유저에게만 접근을 허가하는 가드를 만들어봅시다. 일단 기본적인 가드 템플릿으로 시작하여, 다음 섹션부터 구현을 해보겠습니다. 지금의 가드는 모든 요청을 허락합니다.
+
+```typescript
+// roles.guard.ts
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Observable } from 'rxjs';
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | Observable<boolean> {
+    return true;
+  }
+}
+```
