@@ -71,3 +71,57 @@ export class RolesGuard implements CanActivate {
   }
 }
 ```
+
+### 가드 적용하기
+
+파이프나 예외 필터와 마찬가지로, 가드도 **컨트롤러 수준**, 메서드 수준, 전역 수준에 적용할 수 있습니다. 아래에서는, `@UseGuards()` 데코레이터를 사용해서 컨트롤러 수준에 가드를 적용했습니다. 이 데코레이터는 단일 인수나 반점(,)으로 구분된 인수들을 받을 수 있습니다. 이를 통해 단 한 번의 선언으로 적절하게 가드들을 적용할 수 있습니다.
+
+```typescript
+@Controller('cats')
+@UseGuards(RolesGuard)
+export class CatsController {}
+```
+
+> **팁**
+> 
+> `@UseGuards()` 데코레이터는 `@nestjs/common` 패키지에서 찾을 수 있습니다.
+
+위에서, 인스턴스 대신에 `RolesGuard` 타입을 넘겨서 프레임워크에게 인스턴스화의 역할을 맡기고, 의존성 주입을 가능하게 만들었습니다. 물론 파이프나 예외 필터와 마찬가지로, 저 위치에 인스턴스도 넘길 수 있습니다.
+
+```typescript
+@Controller('cats')
+@UseGuards(new RolesGuard())
+export class CatsController {}
+```
+
+위와 같이 하면, 해당 컨트롤러에 선언된 모든 핸들러에 가드를 적용하게 됩니다. 만약 딱 하나의 메서드에만 가드를 적용하고 싶다면, `@UseGuards` 데코레이터를 **메서드 수준**에 적용하면 됩니다.
+
+전역 가드로 설정하려면, Nest 어플리케이션 인스턴스의 `useGlobalGuards()` 메서드를 사용하면 됩니다.
+
+> **알림**
+> 
+> [하이브리드 어플리케이션](https://docs.nestjs.com/faq/hybrid-application)의 경우, 기본적으로 `useGlobalGuards()`로는 게이트웨이와 마이크로서비스에 가드를 등록할 수 없습니다. (이 동작을 변경하는 방법은 [하이브리드 어플리케이션](https://docs.nestjs.com/faq/hybrid-application) 챕터를 참고해주세요.)
+> 
+> 대신, 하이브리드가 아닌 "표준" 마이크로서비스 어플리케이션에는 `useGlobalGuards()`로 전역 파이프를 등록할 수 있습니다.
+
+전역 가드는 전체 어플리케이션, 즉 모든 컨트롤러와 모든 라우트 핸들러에 적용됩니다. 하지만, 위의 `useGlobalGuards()`를 사용한 예시처럼 모듈 밖에서 등록된 전역 가드는 말 그대로 모듈 밖의 컨텍스트에서 완료되었기 때문에, 의존성을 주입할 수 없게 됩니다. 이 문제를 해결하려면, 아래와 같이 **모듈에 직접** 전역 수준 가드를 등록하면 됩니다.
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+
+@Module({
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+> **팁**
+> 
+> 가드가 의존성 주입이 되도록 위와 같이 만들면, 어떤 모듈에서 설정했던 가드는 전역이 됩니다. 따라서, 전역 가드를 따로 선언하는 모듈을 따로 두시는 게 좋습니다. 또한, `useClass`는 사용자 지정 프로바이더를 등록하는 유일한 방법이 아닙니다. 자세한 건 [여기](https://docs.nestjs.com/fundamentals/custom-providers)를 참고하세요.
