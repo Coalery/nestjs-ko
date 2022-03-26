@@ -125,3 +125,99 @@ export class AppModule {}
 > **팁**
 > 
 > 가드가 의존성 주입이 되도록 위와 같이 만들면, 어떤 모듈에서 설정했던 가드는 전역이 됩니다. 따라서, 전역 가드를 따로 선언하는 모듈을 따로 두시는 게 좋습니다. 또한, `useClass`는 사용자 지정 프로바이더를 등록하는 유일한 방법이 아닙니다. 자세한 건 [여기](https://docs.nestjs.com/fundamentals/custom-providers)를 참고하세요.
+
+### 핸들러마다 역할 설정하기
+
+`RolesGuard`가 작동하기는 하는데, 아직 그리 유용하진 않습니다. 우리는 아직 가드의 가장 중요한 기능인 [실행 컨텍스트](https://docs.nestjs.com/fundamentals/execution-context)를 활용하지 않았습니다. 예를 들어, `CatsController`의 여러 라우트들에 각각 다른 권한을 설정하고 싶을 수도 있습니다. 즉, 어떤 라우트는 어드민 유저만 사용할 수 있고, 다른 어떤 라우트는 모두에게 열려있게 만드는 것입니다. 어떻게 라우트에 유연하고 재사용 가능하게 역할을 설정할 수 있을까요?
+
+여기서 [사용자 지정 메타데이터](https://docs.nestjs.com/fundamentals/execution-context#reflection-and-metadata)를 사용합니다. Nest는 사용자 지정 **메타데이터**를 라우트 핸들러에 붙일 수 있도록 `@SetMetadata()`라는 데코레이터를 제공합니다. 이 메타데이터가 가드가 결정을 내릴 때 필요한 `role` 데이터를 제공합니다. `@SetMetadata()`를 써봅시다.
+
+```typescript
+// cats.controller.ts
+@Post()
+@SetMetadata('roles', ['admin'])
+async create(@Body() createCatDto: CreateCatDto) {
+  this.catsService.create(createCatDto);
+}
+```
+
+> **팁**
+> 
+> `@SetMetadata()` 데코레이터는 `@nestjs/common` 패키지에서 가져올 수 있습니다.
+
+위처럼 하면, `create()` 메서드에 `roles` 메타데이터를 붙일 수 있습니다. 이때, `roles`는 키(key)고, `['admin']`이 값(value)입니다. 저렇게 만들어도 잘 동작하긴 하지만, `@SetMetadata()`를 라우트에 직접 사용하는 것은 좋은 방법이 아닙니다. 대신, 아래와 같이 자신만의 데코레이터를 만드세요.
+
+```typescript
+// roles.decorator.ts
+import { SetMetadata } from '@nestjs/common';
+
+export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
+```
+
+이렇게 하면 더 깔끔하고 읽기 쉬우며, 타입을 강력하게(strongly typed) 설정할 수 있습니다. 이제 `create()` 메서드에 `@Roles()` 데코레이터를 붙여봅시다.
+
+```typescript
+// cats.controller.ts
+@Post()
+@Roles('admin')
+async create(@Body() createCatDto: CreateCatDto) {
+  this.catsService.create(createCatDto);
+}
+```
+
+### 다 합쳐봅시다.
+
+이제 `RolesGuard`로 돌아가서 모두 묶어봅시다. 지금은 모든 경우에 대해 `true`를 반환하여, 모든 요청이 처리되도록 하고 있습니다. 하지만, 현재 유저의 역할과 현재 처리될 라우트의 역할을 비교하여 조건적으로 값을 반환하고 싶습니다. 라우트의 역할, 즉 메타데이터에 접근하려면, `Reflector`라는 헬퍼 클래스를 사용해야 합니다. 이 클래스는 프레임워크에서 기본적으로 제공하며, `@nestjs/core` 패키지에서 가져올 수 있습니다.
+
+```typescript
+// roles.guard.ts
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const roles = this.reflector.get<string[]>('roles', context.getHandler());
+    if (!roles) {
+      return true;
+    }
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+    return matchRoles(roles, user.roles);
+  }
+}
+```
+
+> **팁**
+> 
+> node.js에서는 확인된(authorized) 유저 정보를 `request` 객체에 붙이는 것이 일반적입니다. 그래서 위의 코드에서, `request.user`가 유저 인스턴스와 해당 유저가 갖고 있는 역할을 포함한다고 가정하였습니다. 그러므로 직접 앱을 만드실 때는 `request.user`에 유저 정보를 넣어주는 사용자 지정 **인가 가드**나 미들웨어를 위의 `RolesGuard`와 엮으셔야 합니다. 자세한 내용은 [이 챕터](https://docs.nestjs.com/security/authentication)를 참고해주세요.
+
+> **주의**
+> 
+> `matchRoles()` 함수 내 로직은 필요에 따라 간단할 수도 있고, 복잡할 수도 있습니다. 이 예제의 요점은 가드가 어떻게 요청/응답 사이클에 들어갈 수 있느냐입니다.
+
+컨텍스트에 맞는 방법으로 `Reflector`를 사용하는 방법에 대해서는 **실행 컨텍스트** 챕터의 [리플렉션과 메타데이터](https://docs.nestjs.com/fundamentals/execution-context#reflection-and-metadata) 섹션을 참고해주세요.
+
+유저가 불충분한 권한으로 엔드포인트에 요청을 보내면, Nest가 자동으로 아래의 응답을 반환합니다.
+
+```json
+{
+  "statusCode": 403,
+  "message": "Forbidden resource",
+  "error": "Forbidden"
+}
+```
+
+이는 가드가 `false`를 반환하면, 프레임워크가 `ForbiddenException`을 발생시키기 때문입니다. 만약 다른 응답을 반환하고 싶다면, 원하는 예외를 발생시키면 됩니다. 예를 들면 다음과 같습니다.
+
+```typescript
+throw new UnauthorizedException();
+```
+
+가드에서 발생한 모든 예외는 [예외 레이어](https://docs.nestjs.com/exception-filters)(전역 예외 필터와 해당 컨텍스트에 적용된 예외 필터들)에서 처리됩니다.
+
+> **팁**
+> 
+> 더 현실적으로 인가를 구현하는 방법을 알아보려면 [이 챕터](https://docs.nestjs.com/security/authorization)를 참고하세요.
