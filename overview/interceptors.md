@@ -31,3 +31,38 @@ description: "원문 : https://docs.nestjs.com/interceptors"
 이는 `intercept()` 메서드가 사실상 요청/응답 스트림을 **감싼다**는 뜻이 됩니다. 이를 통해, 최종 라우트 핸들러의 실행 **전/후 모두**에 로직을 구현할 수 있게 됩니다. 자, 그러면 라우트 핸들러의 실행 전에 실행할 코드는 `intercept()` 메서드에서 `handle()`을 호출하기 **전에** 작성하면 된다는 것은 자명합니다. 하지만 핸들러 실행 후에 일어나는 것에는 어떻게 영향을 줄 수 있을까요? 이는 `handle()` 메서드가 `Observable`를 반환하기 때문에, 강력한 [RxJS](https://github.com/ReactiveX/rxjs)의 연산자들을 사용하여 응답을 조작할 수 있습니다. `handle()`을 호출하는 등, 라우트 핸들러를 호출하는 것을 관점 지향 프로그래밍에서는 [Pointcut](https://en.wikipedia.org/wiki/Pointcut)이라고 부르며, 이는 추가적인 로직이 들어갈 부분임을 나타냅니다.
 
 예를 들어, `POST /cats` 요청이 들어온다고 생각해봅시다. 이 요청은 `CatsController` 안에 정의되어 있는 `create()` 핸들러가 처리할 것입니다. 그런데 만약 중간에 `handle()` 메서드를 호출하지 않는 인터셉터가 들어가있는 경우, `create()` 메서드는 호출되지 않을 것입니다. 반대로, `handle()`이 호출되고 그 `Observable`이 반환되면, `create()` 핸들러가 호출됩니다. 그리고 `Observable`을 통해 응답 스트림을 받으면, 스트림에서 추가적인 연산이 실행되고 최종 결과가 요청자에게 반환됩니다.
+
+### Aspect interception
+
+처음으로 살펴볼 인터셉터 사용 예시는 유저의 상호작용에 대한 로깅입니다. 예를 들면 유저 호출 저장, 비동기적으로 이벤트 디스패치, 걸린 시간 계산 등이 있겠네요. 이를 구현한 간단한 `LoggingInterceptor` 아래의 코드에서 볼 수 있습니다.
+
+```typescript
+// logging.interceptor.ts
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
+
+@Injectable()
+export class LoggingInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    console.log('Before...');
+
+    const now = Date.now();
+    return next
+      .handle()
+      .pipe(
+        tap(() => console.log(`After... ${Date.now() - now}ms`)),
+      );
+  }
+}
+```
+
+> **팁**
+> 
+> `NestInterceptor<T, R>`의 `T`는 `Observable<T>`의 타입을 나타내며 응답 스트림의 타입이고, `R`은 `Observable<R>`로 감싸진 값의 타입입니다.
+
+> **알림**
+> 
+> 인터셉터는 컨트롤러, 프로바이더, 가드 등과 마찬가지로 `constructor`를 통해 의존성을 주입 받을 수 있습니다.
+
+`handle()`이 RxJS의 `Observable`를 반환하기 때문에, 스트림을 조작할 때 사용할 수 있는 연산자의 선택폭이 넓어집니다. 위의 예시에서는, 스트림의 정상적/비정상적 종료에 대해 익명 로깅 함수를 실행해주지만, 응답 사이클에는 간섭하지 않는 `tap()` 연산자를 사용하였습니다.
