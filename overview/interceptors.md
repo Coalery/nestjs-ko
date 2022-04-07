@@ -66,3 +66,63 @@ export class LoggingInterceptor implements NestInterceptor {
 > 인터셉터는 컨트롤러, 프로바이더, 가드 등과 마찬가지로 `constructor`를 통해 의존성을 주입 받을 수 있습니다.
 
 `handle()`이 RxJS의 `Observable`를 반환하기 때문에, 스트림을 조작할 때 사용할 수 있는 연산자의 선택폭이 넓어집니다. 위의 예시에서는, 스트림의 정상적/비정상적 종료에 대해 익명 로깅 함수를 실행해주지만, 응답 사이클에는 간섭하지 않는 `tap()` 연산자를 사용하였습니다.
+
+### 인터셉터 적용하기
+
+인터셉터를 적용하려면, `@nestjs/common` 패키지의 `@UseInterceptors()` 데코레이터를 가져와 사용하면 됩니다. 인터셉터도 [파이프](https://docs.nestjs.com/pipes)와 [가드](https://docs.nestjs.com/guards)처럼 컨트롤러 수준, 메서드 수준, 전역 수준에 적용할 수 있습니다.
+
+```typescript
+// cats.controller.ts
+@UseInterceptors(LoggingInterceptor)
+export class CatsController {}
+```
+
+> **팁**
+> 
+> `@UseInterceptors()` 데코레이터는 `@nestjs/common` 패키지에서 가져올 수 있습니다.
+
+위와 같이 하면, `CatsController`에 정의된 각각의 라우트 핸들러에 `LoggingInterceptor` 적용시킬 수 있습니다. 만약 누군가가 `GET /cats` 엔드포인트를 호출하면 표준 출력에 아래와 같이 출력되는 것을 볼 수 있습니다.
+
+```
+Before...
+After... 1ms
+```
+
+인스턴스 대신에 `LoggingInterceptor` 타입을 넘겨서 프레임워크에게 인스턴스화의 역할을 맡기고, 의존성 주입을 가능하게 만든 걸 주목해주세요. 물론 파이프, 가드, 예외 필터와 마찬가지로, 저 자리에 인스턴스를 넣을 수도 있습니다.
+
+```typescript
+// cats.controller.ts
+@UseInterceptors(new LoggingInterceptor())
+export class CatsController {}
+```
+
+언급했듯이, 위의 구문은 해당 컨트롤러에 선언된 모든 핸들러에 인터셉터를 적용시키게 됩니다. 만약 인터셉터를 단일 메서드에만 제한하고 싶다면, 그저 데코레이터를 **메서드 수준**에 적용하면 됩니다.
+
+전역 인터셉터를 적용하려면, Nest 어플리케이션 인스턴스의 `useGlobalInterceptors()` 메서드를 사용하면 됩니다.
+
+```typescript
+const app = await NestFactory.create(AppModule);
+app.useGlobalInterceptors(new LoggingInterceptor());
+```
+
+전역 인터셉터는는 어플리케이션 전체, 즉 모든 컨트롤러와 모든 라우트 핸들러에 적용됩니다. 하지만, 위의 `useGlobalInterceptors()`를 사용한 예시처럼 모듈 밖에서 등록된 전역 인터셉터는 말 그대로 모듈 밖의 컨텍스트에서 완료되었기 때문에, 의존성을 주입할 수 없게 됩니다. 이 문제를 해결하려면, 아래와 같이 **모듈에 직접** 전역 수준 필터를 등록하면 됩니다.
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+
+@Module({
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+> **팁**
+> 
+> 인터셉터가 의존성 주입이 되도록 위와 같이 만들면, 어떤 모듈에서 설정했던 인터셉터는 전역이 됩니다. 따라서, 전역 인터셉터를 따로 선언하는 모듈을 따로 두시는 게 좋습니다. 또한, `useClass`는 사용자 지정 프로바이더를 등록하는 유일한 방법이 아닙니다. 자세한 건 [여기](https://docs.nestjs.com/fundamentals/custom-providers)를 참고하세요.
