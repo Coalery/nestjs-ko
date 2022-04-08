@@ -126,3 +126,88 @@ export class AppModule {}
 > **팁**
 > 
 > 인터셉터가 의존성 주입이 되도록 위와 같이 만들면, 어떤 모듈에서 설정했던 인터셉터는 전역이 됩니다. 따라서, 전역 인터셉터를 따로 선언하는 모듈을 따로 두시는 게 좋습니다. 또한, `useClass`는 사용자 지정 프로바이더를 등록하는 유일한 방법이 아닙니다. 자세한 건 [여기](https://docs.nestjs.com/fundamentals/custom-providers)를 참고하세요.
+
+### 응답 매핑
+
+이미 `handle()`이 `Observable`을 반환한다는 것은 아실 겁니다. 스트림에는 라우트 핸들러가 **반환한** 값을 갖고 있으므로, RxJS의 `map()` 연산자로 쉽게 값을 변형시킬 수 있습니다.
+
+> **주의**
+> 
+> `@Res()`를 직접적으로 사용하여 특정 라이브러리에 대한 응답 객체를 사용하면, 응답 매핑 기능을 사용할 수 없습니다.
+
+`TransformInterceptor`를 만들어봅시다. `TransformInterceptor`는 각각의 응답을 간단한 방법을 통해 변환시켜줄겁니다. 이 인터셉터는 RxJS의 `map()` 연산자를 사용하여 응답 객체를 새로 만든 객체의 `data` 속성에 할당하고, 만들어진 객체를 클라이언트에게 반환합니다.
+
+```typescript
+// transform.interceptor.ts
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+export interface Response<T> {
+  data: T;
+}
+
+@Injectable()
+export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
+    return next.handle().pipe(map(data => ({ data })));
+  }
+}
+```
+
+> **팁**
+> 
+> Nest의 인터셉터는 동기적인 `intercept()` 메서드와 비동기적인 `intercept()` 모두 지원합니다. 그러므로, 만약 비동기적인 작업이 필요하다면 `async`를 붙여서 메서드를 비동기적으로 바꾸면 됩니다.
+
+위와 같이 하면, 누군가가 `GET /cats` 엔드포인트를 호출했을 때 응답은 아래와 같습니다. 이때, 해당 라우트 핸들러가 빈 배열 `[]`를 반환한다고 가정합니다.
+
+```json
+{
+  "data": []
+}
+```
+
+인터셉터는 전체 어플리케이션에서 발생하는 요구사항에 대한 재사용 가능한 솔루션을 만드는 데에 큰 가치를 갖습니다. 예를 들어, 반환하는 응답의 값이 `null`이면 빈 문자열(`''`)으로 변환시켜야 해야하는 경우를 상상해봅시다. 이는 아래와 같이 딱 한 줄의 코드만 수정하고 전역에 인터셉터를 적용하면, 자동으로 등록된 각각의 핸들러에서 사용할 수 있습니다.
+
+```typescript
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+@Injectable()
+export class ExcludeNullInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    return next
+      .handle()
+      .pipe(map(value => value === null ? '' : value ));
+  }
+}
+```
+
+### 예외 매핑
+
+또 다른 흥미로운 인터셉터의 사용 예시로는, RxJS의 `catchError()` 연산자를 이용하여 예외 발생을 오버라이딩하는 것입니다.
+
+```typescript
+// errors.interceptor.ts
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  BadGatewayException,
+  CallHandler,
+} from '@nestjs/common';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+
+@Injectable()
+export class ErrorsInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    return next
+      .handle()
+      .pipe(
+        catchError(err => throwError(() => new BadGatewayException())),
+      );
+  }
+}
+```
