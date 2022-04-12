@@ -211,3 +211,54 @@ export class ErrorsInterceptor implements NestInterceptor {
   }
 }
 ```
+
+### 스트림 오버라이딩
+
+가끔 핸들러 호출을 완전히 막고 다른 값을 대신 반환해야 해야하는 몇 가지의 상황이 있습니다. 그 중 대표적인 예시로는, 더 빠르게 응답하기 위해 캐시를 구현하는 것이 있습니다. 한 번 캐시를 통해 응답을 반환하는 간단한 **캐시 인터셉터**를 살펴봅시다. 실제 사례에서는 TTL, 캐시 무효화, 캐시 크기 등의 요인을 고려하여 만들지만, 그건 이 글의 범위를 벗어나므로 설명하지 않습니다. 아래의 코드가 주요 아이디어를 구현한 기본 예시입니다.
+
+```typescript
+// cache.interceptor.ts
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Observable, of } from 'rxjs';
+
+@Injectable()
+export class CacheInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const isCached = true;
+    if (isCached) {
+      return of([]);
+    }
+    return next.handle();
+  }
+}
+```
+
+위의 `CachedInterceptor`는 하드 코딩된 `isCached` 변수와, 하드 코딩된 `[]` 응답을 갖고 있습니다. (역주: 저기에 알맞은 로직을 넣어주면 되겠죠?) 위 코드의 요점은, RxJS의 `of()` 연산자럴 통해 만들어진 새로운 스트림을 반환하면 라우트 핸들러가 아예 **호출되지 않는다는 것**입니다. 누군가 `CacheInterceptor`를 사용하는 엔드포인트를 호출하면, 하드코딩 된 빈 배열으로 응답이 즉시 반환될 것입니다. 하드코딩 된 방법 말고 좀 더 일반적으로 작동할 수 있는 인터셉터를 만드려면, `Reflector`와 커스텀 데코레이터를 활용하면 됩니다. `Reflector`는 [가드](https://docs.nestjs.com/guards) 챕터에 잘 설명되어 있습니다.
+
+### 다른 연산자들
+
+RxJS 연산자를 통해 스트림을 조작하여, 수많은 기능을 만들어낼 수 있습니다. 다른 일반적인 사용 사례로 **타임아웃**을 살펴봅시다. 요청을 보낸 엔드포인트가 일정 기간 동안 아무것도 반환하지 않으면, 처리를 멈추고 에러 응답을 보내야 하는데, 이는 아래와 같이 구현할 수 있습니다.
+
+```typescript
+// timeout.interceptor.ts
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler, RequestTimeoutException } from '@nestjs/common';
+import { Observable, throwError, TimeoutError } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
+
+@Injectable()
+export class TimeoutInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    return next.handle().pipe(
+      timeout(5000),
+      catchError(err => {
+        if (err instanceof TimeoutError) {
+          return throwError(() => new RequestTimeoutException());
+        }
+        return throwError(() => err);
+      }),
+    );
+  };
+};
+```
+
+5초 뒤에 요청 처리가 알아서 취소됩니다. 물론, `RequestTimeoutException`을 발생시키기 전에 리소스 해제 등의 또다른 로직을 추가할 수도 있습니다.
