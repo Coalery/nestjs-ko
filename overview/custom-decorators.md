@@ -100,3 +100,53 @@ async findOne(@User('firstName') firstName: string) {
 > **팁**
 > 
 > 타입스크립트 유저에게는 `createParamDecorator<T>()`가 제너릭이라는 것을 강조하고 싶습니다. 이는 `createParamDecorator<string>((data, ctx) => ...)`처럼 타입 세이프티(Type safety)를 명시적으로 적용할 수 있다는 것을 뜻합니다. 이 방법 외에도, `createParamDecorator((data: string, ctx) => ...)`처럼 팩토리 함수의 매개변수 타입을 지정하여 적용할 수도 있습니다. 만약 두 방법 모두 사용하지 않는다면 `data`의 타입은 `any`가 됩니다.
+
+### 파이프와 같이 쓰기
+
+Nest는 커스텀 매개변수 데코레이터를 빌트인 데코레이터(`@Body()`, `@Param()`, `@Query()`)와 같은 방식으로 처리합니다. 이는 위 예시의 `user` 인수처럼 커스텀 데코레이팅 된 매개변수에서도 파이프를 사용할 수 있다는 것을 뜻합니다. 게다가, 아래와 같이 커스텀 데코레이터에도 바로 파이프를 적용할 수 있습니다.
+
+```typescript
+@Get()
+async findOne(
+  @User(new ValidationPipe({ validateCustomDecorators: true }))
+  user: UserEntity,
+) {
+  console.log(user);
+}
+```
+
+> **팁**
+> 
+> `validateCustomDecorators` 옵션은 무조건 `true`로 설정되어야 합니다. `ValidationPipe`는 기본적으로 커스텀 데코레이터가 붙은 인수는 검증하지 않기 때문입니다.
+
+### 데코레이터 결합하기
+
+Nest는 여러 데코레이터를 결합해주는 헬퍼 메서드를 제공합니다. 예를 들면, 인증과 관련된 모든 데코레이터를 하나의 데코레이터로 결합할 때를 상상해보세요. 이는 아래와 같이 하면 됩니다.
+
+```typescript
+// auth.decorator.ts
+import { applyDecorators } from '@nestjs/common';
+
+export function Auth(...roles: Role[]) {
+  return applyDecorators(
+    SetMetadata('roles', roles),
+    UseGuards(AuthGuard, RolesGuard),
+    ApiBearerAuth(),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+  );
+}
+```
+
+이렇게 하면, 아래와 같이 `@Auth()` 커스텀 데코레이터를 사용할 수 있습니다.
+
+```typescript
+@Get('users')
+@Auth('admin')
+findAllUsers() {}
+```
+
+이를 통해 네 가지의 데코레이터를 한 번의 선언을 통해 적용할 수 있게 됩니다.
+
+> **주의**
+> 
+> `@nestjs/swagger` 패키지의 `@ApiHideProperty()` 데코레이터는 결합할 수 없으며, `applyDecorators` 함수와도 잘 작동하지 않습니다.
