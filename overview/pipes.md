@@ -448,3 +448,7 @@ async findAll(
   return this.catsService.findAll({ activeOnly, page });
 }
 ```
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)

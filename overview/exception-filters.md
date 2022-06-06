@@ -341,3 +341,7 @@ bootstrap();
 ```
 
 두 번째 방법은 [여기](https://docs.nestjs.com/exception-filters#binding-filters)서 봤듯이, `APP_FILTER` 토큰을 사용하는 것입니다.
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)

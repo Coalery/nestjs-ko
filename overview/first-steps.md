@@ -98,3 +98,7 @@ $ npm run start
 ```
 
 위 명령어는 `src/main.ts` 파일에 정의되어 있는 포트로 HTTP 서버가 요청을 기다리게 합니다. 어플리케이션이 잘 켜졌다면, 브라우저를 열어서 `http://localhost:3000/`으로 가보세요. `Hello World!` 메세지를 볼 수 있을 거에요!
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)

@@ -154,7 +154,7 @@ export class CatsModule {}
 
 > **팁**
 > 
-> 모든 것을 전역적으로 만드는 것은 좋은 디자인이 아닙니다. 전역 모듈은 애플리케이션의 기반을 만들 때 여러 곳에서 반복되는 코드를 줄이기 위해 존재합니다. 따라서, 모듈의 `imports` 배열을 사용하는 것이 일반적으로 모듈의 API를 다른 모듈에서 사용할 수 있게 하는 더 좋은 방법입니다.
+> 모든 것을 전역적으로 만드는 것은 좋은 디자인이 아닙니다. 전역 모듈은 어플리케이션의 기반을 만들 때 여러 곳에서 반복되는 코드를 줄이기 위해 존재합니다. 따라서, 모듈의 `imports` 배열을 사용하는 것이 일반적으로 모듈의 API를 다른 모듈에서 사용할 수 있게 하는 더 좋은 방법입니다.
 
 ### 동적 모듈
 
@@ -231,3 +231,7 @@ export class AppModule {}
 ```
 
 [동적 모듈](https://docs.nestjs.com/fundamentals/dynamic-modules) 챕터에서는 이 주제를 더 자세히 다루고, [실제로 작동하는 예시](https://github.com/nestjs/nest/tree/master/sample/25-dynamic-modules)를 포함합니다.
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)

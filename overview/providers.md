@@ -173,3 +173,7 @@ src
 이미 존재하는 인스턴스나, 프로바이더의 인스턴스를 동적으로 만들어야 한다면, [여기](https://docs.nestjs.com/fundamentals/module-ref)를 참고해주세요.
 
 컨트롤러 없이 독립적으로 동작하는 어플리케이션이나, 켜는 동안 설정(config) 서비스를 사용해야 하는 경우 등, `bootstrap()` 함수 내에서 프로바이더를 가져와야 한다면 [여기](https://docs.nestjs.com/standalone-applications)를 참고해주세요.
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)

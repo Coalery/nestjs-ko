@@ -221,3 +221,7 @@ throw new UnauthorizedException();
 > **팁**
 > 
 > 더 현실적으로 인가를 구현하는 방법을 알아보려면 [이 챕터](https://docs.nestjs.com/security/authorization)를 참고하세요.
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)

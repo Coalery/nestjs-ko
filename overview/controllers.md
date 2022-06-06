@@ -4,7 +4,7 @@ description: "원문 : https://docs.nestjs.com/controllers"
 
 # Controllers
 
-컨트롤러는 들어오는 **요청**을 처리하고, **응답**을 클라이언트에게 반환하는 역할을 합니다.
+컨트롤러는 들어오는 **요청**을 처리해서 클라이언트에게 **응답**을 반환하는 역할을 합니다.
 
 ![Controllers_1.png](https://docs.nestjs.com/assets/Controllers_1.png)
 
@@ -421,3 +421,7 @@ findAll(@Res({ passthrough: true }) res: Response) {
 ```
 
 이제 어떠한 조건에 따라 쿠키나 헤더를 설정하는 등, 네이티브 객체와 상호작용 가능하면서 동시에 나머지는 프레임워크가 처리할 수 있도록 할 수 있습니다.
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)

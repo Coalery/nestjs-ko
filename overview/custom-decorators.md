@@ -150,3 +150,7 @@ findAllUsers() {}
 > **주의**
 > 
 > `@nestjs/swagger` 패키지의 `@ApiHideProperty()` 데코레이터는 결합할 수 없으며, `applyDecorators` 함수와도 잘 작동하지 않습니다.
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)

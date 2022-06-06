@@ -262,3 +262,7 @@ export class TimeoutInterceptor implements NestInterceptor {
 ```
 
 5초 뒤에 요청 처리가 알아서 취소됩니다. 물론, `RequestTimeoutException`을 발생시키기 전에 리소스 해제 등의 또다른 로직을 추가할 수도 있습니다.
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)
