@@ -205,3 +205,104 @@ export class AppModule {}
 또한, 토큰으로 `ConfigService` 클래스 이름을 사용하였습니다. `ConfigService`에 의존하는 모든 클래스에 대하여, Nest는 제공된 클래스(`DevelopmentConfigService`나 `ProductionConfigService`)의 인스턴스를 주입하며, 다른 곳에 선언되어있을 수도 있는 기본 구현을 오버라이딩 합니다. 예를 들면, `@Injectable()` 데코레이터와 함께 성넌된 `ConfigService`가 있겠죠!
 
 즉, `ConfigService`에 의존하는 모든 클래스에게, 다른 곳에 `ConfigService`가 선언되어있던 안 되어있던 관계 없이, 현재 환경(`NODE_ENV`)에 따라 `DevelopmentConfigService`나 `ProductionConfigService` 중 하나의 인스턴스를 주입해줍니다.
+
+### 팩토리 프로바이더: `useFactory`
+
+`useFactory`는 프로바이더를 **동적으로** 만들 수 있게 해줍니다. 팩토리 함수에서 반환된 값을 실제 프로바이더로 제공합니다. 팩토리 함수는 필요에 따라 간단할 수도 있고, 복잡할 수도 있습니다. 간단한 팩토리는 다른 프로바이더에 의존하지 않을 것입니다. 더 복잡한 팩토리는 결과를 계산할 때 필요한 다른 프로바이더를 자기 스스로 주입할 수도 있습니다. 후자의 경우, 팩토리 프로바이더는 관련된 메커니즘의 쌍을 갖게 됩니다.
+
+1. 팩토리 함수는 인수를 받을 수 있습니다.
+2. `inject` 프로퍼티는, Nest가 의존성을 해결하고 인스턴스화 과정 중에 팩토리 함수에게 인수로 넘겨줄 프로바이더의 배열을 받습니다. 이 프로바이더들도 선택적으로 될 수 있습니다. Nest는 `inject` 배열 내에 있는 프로바이더의 인스턴스를 팩토리 함수의 인수로 넘겨줍니다. 이때, 배열 내의 프로바이더 순서와 인수 순서는 동일합니다. 이를 보여주는 코드가 아래와 같습니다.
+
+```typescript
+const connectionFactory = {
+  provide: 'CONNECTION',
+  useFactory: (optionsProvider: OptionsProvider, optionalProvider?: string) => {
+    const options = optionsProvider.get();
+    return new DatabaseConnection(options);
+  },
+  inject: [OptionsProvider, { token: 'SomeOptionalProvider', optional: true }],
+  //       \_____________/            \__________________/
+  //        This provider              The provider with this
+  //        is mandatory.              token can resolves to `undefined`.
+};
+
+@Module({
+  providers: [
+    connectionFactory,
+    OptionsProvider,
+    // { provide: 'SomeOptionalProvider', useValue: 'anything' },
+  ],
+})
+export class AppModule {}
+```
+
+### 별칭 프로바이더: `useExisting`
+
+`useExisting`은 이미 존재하는 프로바이더에 대한 별칭을 생성할 수 있게 해줍니다. 아래의 예시에서, `'AliasedLoggerService'` 문자열 기반 토큰은 `LoggerService` 클래스 기반 토큰의 별칭입니다. 이때, `AliasedLoggerService`와 `LoggerService` 두 의존성을 아래처럼 같이 넣어준다고 가정해봅시다. 만약 두 의존성이 `SINGLETON` 스코프로 명시되어 있다면, 둘은 같은 인스턴스로 처리됩니다.
+
+```typescript
+@Injectable()
+class LoggerService {
+  /* implementation details */
+}
+
+const loggerAliasProvider = {
+  provide: 'AliasedLoggerService',
+  useExisting: LoggerService,
+};
+
+@Module({
+  providers: [LoggerService, loggerAliasProvider],
+})
+export class AppModule {}
+```
+
+### 비서비스 기반 프로바이더
+
+프로바이더는 보통 서비스를 제공하지만, 꼭 서비스만 제공할 수 있는 것은 아닙니다. 프로바이더는 **어떤** 값이던 제공할 수 있습니다. 예를 들면, 아래와 같이 현재 환경에 따라 설정 객체들의 배열을 제공할 수도 있습니다.
+
+```typescript
+const configFactory = {
+  provide: 'CONFIG',
+  useFactory: () => {
+    return process.env.NODE_ENV === 'development' ? devConfig : prodConfig;
+  },
+};
+
+@Module({
+  providers: [configFactory],
+})
+export class AppModule {}
+```
+
+### 커스텀 프로바이더 내보내기
+
+다른 프로바이더들과 마찬가지로, 커스텀 프로바이더는 선언한 모듈 내로 범위가 제한됩니다. 이를 다른 모듈에서도 사용할 수 있게 하려면, 모듈에서 내보내야 합니다. 커스텀 프로바이더를 내보내려면, 해당 프로바이더의 토큰을 사용하거나 프로바이더 객체를 사용하면 됩니다.
+
+아래는 토큰을 사용하여 내보낸 것입니다.
+
+```typescript
+```
+
+또는, 프로바이더 객체를 사용한 것입니다.
+
+```typescript
+const connectionFactory = {
+  provide: 'CONNECTION',
+  useFactory: (optionsProvider: OptionsProvider) => {
+    const options = optionsProvider.get();
+    return new DatabaseConnection(options);
+  },
+  inject: [OptionsProvider],
+};
+
+@Module({
+  providers: [connectionFactory],
+  exports: [connectionFactory],
+})
+export class AppModule {}
+```
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)
