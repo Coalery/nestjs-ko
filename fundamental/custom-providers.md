@@ -180,3 +180,28 @@ export class CatsRepository {
 > `@Inject()` 데코레이터는 `@nestjs/common` 패키지에서 가져올 수 있습니다.
 
 위의 예시에서는 더 나은 이해를 위해 `'CONNECTION'` 문자열을 바로 썼습니다만, 클린 코드를 위해서는 `constats.ts` 같은 분리된 파일에 토큰을 정의하는 것이 좋습니다. 즉, 자체 파일에 정의해서 필요할 때마다 임프토 해오는 심볼이나 열거형처럼 사용하면 됩니다.
+
+### 클래스 프로바이더: `useClass`
+
+`useClass`는 토큰과 연결될 클래스를 동적으로 결정할 수 있게 해줍니다. 예를 들면 `ConfigService` 클래스가 있고, 현재 상태에 따라 Nest가 다른 설정 서비스 구현체를 제공하길 바란다고 생각해봅시다. 이를 구현한 코드가 아래와 같습니다.
+
+```typescript
+const configServiceProvider = {
+  provide: ConfigService,
+  useClass:
+    process.env.NODE_ENV === 'development'
+      ? DevelopmentConfigService
+      : ProductionConfigService,
+};
+
+@Module({
+  providers: [configServiceProvider],
+})
+export class AppModule {}
+```
+
+위 코드에서 두 가지 부분을 한 번 살펴봅시다. 먼저 `configServiceProvider` 리터럴 객체를 정의했고, 이를 모듈 데코레이터의 `providers` 프로퍼티에 넣어주었습니다. 이는 간단한 코드일 뿐이지만, 기능적으로는 이 챕터에서 지금까지 사용한 예시와 동일합니다.
+
+또한, 토큰으로 `ConfigService` 클래스 이름을 사용하였습니다. `ConfigService`에 의존하는 모든 클래스에 대하여, Nest는 제공된 클래스(`DevelopmentConfigService`나 `ProductionConfigService`)의 인스턴스를 주입하며, 다른 곳에 선언되어있을 수도 있는 기본 구현을 오버라이딩 합니다. 예를 들면, `@Injectable()` 데코레이터와 함께 성넌된 `ConfigService`가 있겠죠!
+
+즉, `ConfigService`에 의존하는 모든 클래스에게, 다른 곳에 `ConfigService`가 선언되어있던 안 되어있던 관계 없이, 현재 환경(`NODE_ENV`)에 따라 `DevelopmentConfigService`나 `ProductionConfigService` 중 하나의 인스턴스를 주입해줍니다.
