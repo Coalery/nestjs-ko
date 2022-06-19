@@ -114,3 +114,69 @@ Nest에서는 위의 경우들을 처리하기 위해 커스텀 프로바이더�
 > 
 > 만약 의존성 해결에서 문제가 발생했다면, `NEST_DEBUG` 환경 변수를 설정하여 어플리케이션 시작 시 추가적인 의존성 해결 관련 로그를 가져올 수 있습니다.
 
+### 값 프로바이더: `useValue`
+
+`useValue`는 상수값을 주입하거나, 외부 라이브러리를 Nest 컨테이너 안에 넣거나, 실제 구현 대신 가짜(mock) 객체로 대체할 때 유용합니다. 테스트를 위해 Nest가 실제 `CatsService` 대신에 가짜 객체를 사용하도록 해봅시다.
+
+```typescript
+import { CatsService } from './cats.service';
+
+const mockCatsService = {
+  /* mock implementation
+  ...
+  */
+};
+
+@Module({
+  imports: [CatsModule],
+  providers: [
+    {
+      provide: CatsService,
+      useValue: mockCatsService,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+위의 예시에서 `CatsService` 토큰은 `mockCatsService` 가짜 객체와 연결됩니다. `useValue`는 값을 필요로 하며, 위의 경우에서 값은 `CatsService` 클래스와 같은 인터페이스를 갖는 리터럴 객체입니다. 타입스크립트의 [구조적 타이핑](https://www.typescriptlang.org/docs/handbook/type-compatibility.html) 때문에, 리터럴 객체거나 `new`로 만들어진 클래스 인스턴스거나 인터페이스와 호환만 된다면 어떤 객체든 사용할 수 있습니다.
+
+### 비클래스 기반 프로바이더 토큰
+
+앞에서, 우리는 `providers` 배열 내에 속해있는 프로바이더의 `provide` 프로퍼티의 값으로, 즉 프로바이더의 토큰으로 클래스 이름을 사용했습니다. 이렇게 클래스 이름을 토큰으로 사용하는 것은 **생성자 기반 주입**에 사용되는 표준 패턴입니다. 이 개념이 명확하게 기억나지 않으신다면 [의존성 주입 기초](https://docs.nestjs.com/fundamentals/custom-providers#di-fundamentals)를 다시 한 번 보고 와주세요!
+하지만 가끔, 문자열이나 심볼(Symbol)을 토큰으로 사용하고 싶을 때가 있습니다. 다음과 같이 말이죠.
+
+```typescript
+import { connection } from './connection';
+
+@Module({
+  providers: [
+    {
+      provide: 'CONNECTION',
+      useValue: connection,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+이 예시에서는, 문자열 토큰(`'CONNECTION'`)과 외부 파일에서 가져와서 이미 존재하는 `connection` 객체를 연결하였습니다.
+
+> **알림**
+> 
+> 문자열을 토큰으로 사용할 수도 있고, 자바스크립트의 [심볼](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol)이나 타입스크립트의 [열거형](https://www.typescriptlang.org/docs/handbook/enums.html)을 사용할 수도 있습니다.
+
+이전에, 어떻게 표준 [생성자 기반 주입](https://docs.nestjs.com/providers#dependency-injection) 패턴을 사용하여 프로바이더를 주입할 수 있는지를 살펴보았습니다. 해당 패턴은 의존성이 클래스 이름으로 선언되어야만 했습니다. 하지만 `'CONNECTION'` 커스텀 프로바이더는 문자열 값 토큰을 사용하고 있네요. 이런 프로바이더는 어떻게 주입을 해야할까요? 바로, `@Inject()` 데코레이터를 사용하면 됩니다. 이 데코레이터는 토큰을 인수로 받습니다.
+
+```typescript
+@Injectable()
+export class CatsRepository {
+  constructor(@Inject('CONNECTION') connection: Connection) {}
+}
+```
+
+> **팁**
+> 
+> `@Inject()` 데코레이터는 `@nestjs/common` 패키지에서 가져올 수 있습니다.
+
+위의 예시에서는 더 나은 이해를 위해 `'CONNECTION'` 문자열을 바로 썼습니다만, 클린 코드를 위해서는 `constats.ts` 같은 분리된 파일에 토큰을 정의하는 것이 좋습니다. 즉, 자체 파일에 정의해서 필요할 때마다 임프토 해오는 심볼이나 열거형처럼 사용하면 됩니다.
