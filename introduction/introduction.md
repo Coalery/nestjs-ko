@@ -65,3 +65,7 @@ npm이나 yarn을 통해 바닥부터 수동으로 주요 파일들을 설치하
 ```sh
 $ npm i --save @nestjs/core @nestjs/common rxjs reflect-metadata
 ```
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)
