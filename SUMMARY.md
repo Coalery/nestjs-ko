@@ -20,3 +20,4 @@
 ## FUNDAMENTALS
 
 * [Custom providers](fundamental/custom-providers.md)
+* [Asynchronous providers](fundamental/asynchronous-providers.md)
