@@ -149,7 +149,7 @@ consumer
 
 ### 함수형 미들웨어
 
-위에서 만들어본 `LoggerMiddleware` 클래스는 상당히 간단한 코드입니다. 추가적인 변수도 없고, 메서드도 없으며, 의존성도 없거든요. 그렇다면, 클래스 대신에 간단한 함수를 사용해서 미들웨어를 정의해보는 것은 어떨까요? 이러한 미들웨어를 **함수형 미들웨어(Functional Middleware)**라고 부릅니다. 그럼, `LoggerMiddleware`를 클래스 기반에서 함수형 미들웨어로 바꿔봅시다.
+위에서 만들어본 `LoggerMiddleware` 클래스는 상당히 간단한 코드입니다. 추가적인 변수도 없고, 메서드도 없으며, 의존성도 없거든요. 그렇다면, 클래스 대신에 간단한 함수를 사용해서 미들웨어를 정의해보는 것은 어떨까요? 이러한 미들웨어를 **함수형 미들웨어(Functional Middleware)** 라고 부릅니다. 그럼, `LoggerMiddleware`를 클래스 기반에서 함수형 미들웨어로 바꿔봅시다.
 
 ```typescript
 // logger.middleware.ts
