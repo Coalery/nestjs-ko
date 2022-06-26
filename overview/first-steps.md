@@ -1,6 +1,6 @@
 # First steps
 
-원문 : https://docs.nestjs.com/first-steps
+원문 : [https://docs.nestjs.com/first-steps](https://docs.nestjs.com/first-steps)
 
 이 글에서는 Nest의 핵심을 배우게 됩니다. 기본적인 CRUD 어플리케이션을 만들어보며 Nest의 필수 구성 요소들과 친해져보겠습니다!
 

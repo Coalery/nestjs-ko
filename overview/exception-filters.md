@@ -1,6 +1,6 @@
 # Exception filters
 
-원문 : https://docs.nestjs.com/exception-filters
+원문 : [https://docs.nestjs.com/exception-filters](https://docs.nestjs.com/exception-filters)
 
 Nest는 어플리케이션의 모든 처리되지 않은 예외를 처리하는 역할을 하는 <strong>예외 층(Exceptions Layer)</strong>을 갖고 있습니다. 어플리케이션 코드에서 예외가 처리되지 않았을 때, 해당 예외가 예외 층에서 잡혀서, 자동으로 적당한 유저 친화적 응답을 전송합니다.
 

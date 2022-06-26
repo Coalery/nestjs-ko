@@ -1,6 +1,6 @@
 # Providers
 
-원문 : https://docs.nestjs.com/providers
+원문 : [https://docs.nestjs.com/providers](https://docs.nestjs.com/providers)
 
 프로바이더는 Nest의 기본 개념입니다. 서비스, 리포지토리, 팩토리, 헬퍼 등, 많은 Nest의 기본 클래스들은 프로바이더입니다. 프로바이더의 주요 아이디어는 의존성 **주입**이 가능하다는 것입니다. 이는 객체들이 서로 다양한 관계를 형성할 수 있도록 하고, Nest에게 인스턴스 생성을 대부분 위임할 수 있게 합니다.
 
