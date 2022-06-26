@@ -1,8 +1,6 @@
----
-description: "원문 : https://docs.nestjs.com/modules"
----
-
 # Modules
+
+원문 : https://docs.nestjs.com/modules
 
 모듈은 `@Module()` 데코레이터가 붙은 클래스입니다. `@Module()` 데코레이터는 **Nest**가 어플리케이션의 구조를 구성할 때 사용하는 메타데이터를 붙여주게 됩니다.
 
@@ -235,3 +233,4 @@ export class AppModule {}
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
+- [cpprhtn](https://github.com/cpprhtn)

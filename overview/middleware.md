@@ -1,8 +1,6 @@
----
-description: "원문 : https://docs.nestjs.com/middleware"
----
-
 # Middleware
+
+원문 : https://docs.nestjs.com/middleware
 
 미들웨어는 라우트 핸들러 전에 호출되는 함수이며, 어플리케이션의 요청-응답 사이클의 [요청](https://expressjs.com/en/4x/api.html#req) 객체와 [응답](https://expressjs.com/en/4x/api.html#res) 객체, 그리고 `next()`라는 미들웨어 함수에 접근할 수 있습니다. **next** 함수는 일반적으로 `next`라는 이름을 가진 변수로 나타냅니다.
 
@@ -200,3 +198,4 @@ await app.listen(3000);
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
+- [cpprhtn](https://github.com/cpprhtn)

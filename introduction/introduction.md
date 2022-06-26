@@ -1,8 +1,6 @@
----
-description: "원문 : https://docs.nestjs.com/"
----
-
 # Introduction
+
+원문 : https://docs.nestjs.com
 
 ### 소개
 
@@ -69,3 +67,4 @@ $ npm i --save @nestjs/core @nestjs/common rxjs reflect-metadata
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
+- [cpprhtn](https://github.com/cpprhtn)

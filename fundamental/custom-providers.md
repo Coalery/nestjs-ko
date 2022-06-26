@@ -1,8 +1,6 @@
----
-description: "원문 : https://docs.nestjs.com/fundamentals/custom-providers"
----
-
 # Custom providers
+
+원문 : https://docs.nestjs.com/fundamentals/custom-providers
 
 앞에서 **의존성 주입(DI)** 의 다양한 면을 살펴보았고, 이를 Nest에서 어떻게 사용하는지를 보았습니다. 그 예시 중 하나가 바로 클래스에 프로바이더를 주입할 때 사용하는 [생성자 기반](https://docs.nestjs.com/providers#dependency-injection) 의존성 주입입니다. 아마 의존성 주입이 Nest 코어에 기본적으로 내장되어 있다는 걸 들어도 딱히 놀라시진 않겠죠. 하지만, 아직 주요한 패턴 하나만을 만나봤을 뿐입니다! 어플리케이션이 점점 복잡해지면 의존성 주입 시스템의 모든 기능들이 필요해질 겁니다. 그러니, 더 자세히 알아봅시다!
 
@@ -320,3 +318,4 @@ export class AppModule {}
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
+- [cpprhtn](https://github.com/cpprhtn)

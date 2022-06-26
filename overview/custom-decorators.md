@@ -1,8 +1,6 @@
----
-description: "원문 : https://docs.nestjs.com/custom-decorators"
----
-
 # Custom decorators
+
+원문 : https://docs.nestjs.com/custom-decorators
 
 Nest는 **데코레이터**라는 언어의 기능 위에서 만들어졌습니다. 데코레이터는 많은 프로그래밍 언어들에도 있듯이 잘 알려진 개념입니다만, 자바스크립트 세상에서는 아직 상대적으로 새로운 기능에 속합니다. 데코레이터가 어떻게 동작하는지를 더 잘 이해하려면, [이 글](https://medium.com/google-developers/exploring-es7-decorators-76ecb65fb841)을 읽어보는 걸 추천드립니다. 간단하게 정의해보자면 다음과 같습니다.
 
@@ -154,3 +152,4 @@ findAllUsers() {}
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
+- [cpprhtn](https://github.com/cpprhtn)
