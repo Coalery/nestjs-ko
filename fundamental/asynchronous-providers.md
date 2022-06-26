@@ -1,6 +1,6 @@
 # Asynchronous providers
 
-원문 : [https://docs.nestjs.com/fundamentals/custom-providers](https://docs.nestjs.com/fundamentals/custom-providers)
+원문 : [https://docs.nestjs.com/fundamentals/async-providers](https://docs.nestjs.com/fundamentals/async-providers)
 
 가끔 하나 이상의 **비동기 작업**이 완료될 때까지 어플리케이션 시작을 지연시켜야 할 때가 있습니다. 예를 들면, 데이터베이스와의 연결이 완료되기 전까지 요청을 받고 싶지 않을 수 있죠. 이 문제는 비동기 프로바이더를 통해 해결할 수 있습니다.
 
