@@ -1,8 +1,6 @@
----
-description: "원문 : https://docs.nestjs.com/controllers"
----
-
 # Controllers
+
+원문 : https://docs.nestjs.com/controllers
 
 컨트롤러는 들어오는 **요청**을 처리해서 클라이언트에게 **응답**을 반환하는 역할을 합니다.
 
@@ -425,3 +423,4 @@ findAll(@Res({ passthrough: true }) res: Response) {
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
+- [cpprhtn](https://github.com/cpprhtn)

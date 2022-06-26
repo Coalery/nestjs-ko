@@ -1,8 +1,6 @@
----
-description: "원문 : https://docs.nestjs.com/pipes"
----
-
 # Pipes
+
+원문 : https://docs.nestjs.com/pipes
 
 파이프는 `@Injectable()` 데코레이터가 붙어있는, `PipeTransform` 인터페이스를 구현하는 클래스입니다.
 
@@ -452,3 +450,4 @@ async findAll(
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
+- [cpprhtn](https://github.com/cpprhtn)
