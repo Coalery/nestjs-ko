@@ -269,6 +269,18 @@ export const CONFIG_OPTIONS = 'CONFIG_OPTIONS';
 
 이 챕터의 전체 예제 코드는 [여기](https://github.com/nestjs/nest/tree/master/sample/25-dynamic-modules)를 참고해주세요.
 
+### 커뮤니티 가이드라인
+
+`@nestjs/` 안에 있는 패키지들에서 `forRoot`, `register`, `forFeature` 같은 메서드들을 본 적이 있을겁니다. 그리고 이 메서드들 사이에 차이점이 무엇인지 궁금해하실 겁니다. 이에 대한 엄격한 규칙이 있는 건 아니지만, `@nestjs/` 패키지들은 아래의 가이드라인을 따르고 있습니다.
+
+모듈을 만들 때는,
+
+- `register`: 해당 모듈을 호출하는 곳에서만 사용하기 위해 특정 설정을 가진 동적 모듈을 설정할 때 사용합니다. 예를 들면, Nest의 `@nestjs/axios`의 `HttpModule.register({ baseUrl: 'someUrl' })`이 있습니다. 만약 다른 모듈에서 사용할 때는 `HttpModule.register({ baseUrl: 'somewhere else' })` 같이 다른 설정을 사용합니다. 즉, 원하는 만큼 쓸 수 있게 하고 싶을 때 사용합니다.
+- `forRoot`: 동적 모듈을 딱 한 번만 설정하고, 여러 곳에서 재사용하고 싶을 때 사용합니다. 이것이 `GraphQLModule.forRoot()`나 `TypeOrmModule.forRoot()` 등을 단 한 개만 가지고 있는 이유입니다.
+- `forFeature`: `forRoot`의 동적 모듈 설정을 사용하지만, 해당 동적 모듈을 사용하는 모듈에 따라 설정을 변경하고 싶을 때 사용합니다. 예를 들면, 해당 모듈이 접근해야 하는 리포지토리가 있다거나, 로거(Logger)가 사용해야하는 컨텍스트가 있다거나.
+
+위의 세 가지는 일반적으로 각자 같은 기능을 하는 비동기 메서드들(`registerAsync`, `forRootAsync`, `forFeatureAsync`)을 갖고 있으며, 이들 또한 Nest의 의존성 주입이 잘 적용됩니다.
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
