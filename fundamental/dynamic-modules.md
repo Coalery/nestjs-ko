@@ -465,6 +465,51 @@ export class ConfigService {
 }
 ```
 
+### 자동으로 생성된 메서드 확장하기
+
+`register`이나 `registerAsync` 등 자동으로 생성된 정적 메서드들은 필요하다면 확장시킬 수도 있습니다.
+
+```typescript
+import { Module } from '@nestjs/common';
+import { ConfigService } from './config.service';
+import {
+  ConfigurableModuleClass,
+  ASYNC_OPTIONS_TYPE,
+  OPTIONS_TYPE,
+} from './config.module-definition';
+
+@Module({
+  providers: [ConfigService],
+  exports: [ConfigService],
+})
+export class ConfigModule extends ConfigurableModuleClass {
+  static register(options: typeof OPTIONS_TYPE): DynamicModule {
+    return {
+      // your custom logic here
+      ...super.register(options),
+    };
+  }
+
+  static registerAsync(options: typeof ASYNC_OPTIONS_TYPE): DynamicModule {
+    return {
+      // your custom logic here
+      ...super.registerAsync(options),
+    };
+  }
+}
+```
+
+모듈 정의 파일에서 `OPTIONS_TYPE`과 `ASYNC_OPTIONS_TYPE` 타입을 사용한 것에 주목해주세요.
+
+```typescript
+export const {
+  ConfigurableModuleClass,
+  MODULE_OPTIONS_TOKEN,
+  OPTIONS_TYPE,
+  ASYNC_OPTIONS_TYPE,
+} = new ConfigurableModuleBuilder<ConfigModuleOptions>().build();
+```
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
