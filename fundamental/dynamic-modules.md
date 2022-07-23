@@ -281,6 +281,73 @@ export const CONFIG_OPTIONS = 'CONFIG_OPTIONS';
 
 위의 세 가지는 일반적으로 각자 같은 기능을 하는 비동기 메서드들(`registerAsync`, `forRootAsync`, `forFeatureAsync`)을 갖고 있으며, 이들 또한 Nest의 의존성 주입이 잘 적용됩니다.
 
+### ConfigurableModuleBuilder
+
+직접 고도로 설정 가능한 모듈을 만들 때, 동적 모듈이 제공하는 비동기 메서드들을 사죵하는 건 상당히 복잡합니다. 특히 처음 해보는 사람들에겐 더 그렇죠. 그래서 Nest는 이런 과정을 쉽게 만들어주고, 몇 줄의 코드만으로 모듈의 설계도(blueprint)를 만들 수 있는 `ConfigurableModuleBuilder` 클래스를 제공합니다.
+
+예시로 위에서 사용했던 `ConfigModule`을 `ConfigurableModuleBuilder`로 바꿔봅시다. 시작하기 전에, `ConfigModule`에서 사용하는 옵션을 나타내는 인터페이스를 만들어야 합니다.
+
+```typescript
+export interface ConfigModuleOptions {
+  folder: string;
+}
+```
+
+준비가 되었다면, `config.module.ts` 파일이 있는 위치에 새 전용 파일을 만들고 이름을 `config.module-definition.ts`로 지어주세요. 이 파일 안에서는, `ConfigurableModuleBuilder`를 사용해서 `ConfigModule`의 정의를 만들어낼 겁니다.
+
+```typescript
+// config.module-definition.ts
+import { ConfigurableModuleBuilder } from '@nestjs/common';
+import { ConfigModuleOptions } from './interfaces/config-module-options.interface';
+
+export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN } =
+  new ConfigurableModuleBuilder<ConfigModuleOptions>().build();
+```
+
+이제 `cofing.module.ts` 파일을 열어서, 자동으로 생성된 `ConfigurableModuleClass`를 사용할 수 있도록 수정해봅시다.
+
+```typescript
+// config.module.ts
+import { Module } from '@nestjs/common';
+import { ConfigService } from './config.service';
+import { ConfigurableModuleClass } from './config.module-definition';
+
+@Module({
+  providers: [ConfigService],
+  exports: [ConfigService],
+})
+export class ConfigModule extends ConfigurableModuleClass {}
+```
+
+`ConfigurableModuleClass`를 상속 받음으로써, `ConfigModule`은 앞에서 직접 구현했던 `register` 메서드를 자체적으로 제공할 뿐만 아니라, 사용하는 모듈에서 비동기적으로 모듈을 설정할 수 있도록 `registerAsync` 메서드도 함께 제공합니다.
+
+```typescript
+@Module({
+  imports: [
+    ConfigModule.register({ folder: './config' }),
+    // or alternatively:
+    // ConfigModule.registerAsync({
+    //   useFactory: () => {
+    //     return {
+    //       folder: './config',
+    //     }
+    //   },
+    //   inject: [...any extra dependencies...]
+    // }),
+  ],
+})
+export class AppModule {}
+```
+
+마지막으로, 앞서 사용했던 `'CONFIG_OPTIONS'` 대신에 생성된 모듈의 옵션 프로바이더를 사용하도록 `ConfigService` 클래스를 수정해줍니다.
+
+```typescript
+@Injectable()
+export class ConfigService {
+  constructor(@Inject(MODULE_OPTIONS_TOKEN) private options: ConfigModuleOptions) { ... }
+}
+```
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
