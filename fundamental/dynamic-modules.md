@@ -378,6 +378,42 @@ export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN } =
 export class AppModule {}
 ```
 
+### 커스텀 옵션 팩토리 클래스
+
+`registerAsync`나 `forRootAsync` 등의 메서드는 모듈 설정에 대한 프로바이더 정의를 사용하는 쪽에서 전달할 수 있게 하기 때문에, 라이브러리를 사용할 때는 설정 객체를 만들 때 사용할 클래스를 제공할 수도 있습니다.
+
+```typescript
+@Module({
+  imports: [
+    ConfigModule.registerAsync({
+      useClass: ConfigModuleOptionsFactory,
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+이러한 클래스는 기본적으로 모듈 설정 객체를 반환하는 `create()` 메서드를 반환해야 합니다. 하지만, 사용하는 라이브러리가 다른 이름 규칙(naming convention)을 갖고 있다면, `ConfigurableModuleBuilder#setFactoryMethodName` 메서드를 사용해서 다른 메서드 이름으로 바꿀 수 있습니다. 예를 들면 `createConfigOptions` 같이 쓸 수 있겠죠.
+
+```typescript
+// config.module-definition.ts
+export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN } =
+  new ConfigurableModuleBuilder<ConfigModuleOptions>().setFactoryMethodName('createConfigOptions').build();
+```
+
+이렇게 하면, `ConfigModuleOptionsFactory` 클래스는 `create` 메서드 대신에 `createConfigOptions` 메서드를 노출시켜야 합니다.
+
+```typescript
+@Module({
+  imports: [
+    ConfigModule.registerAsync({
+      useClass: ConfigModuleOptionsFactory, // <-- this class must provide the "createConfigOptions" method
+    }),
+  ],
+})
+export class AppModule {}
+```
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
