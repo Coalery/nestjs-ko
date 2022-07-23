@@ -163,6 +163,112 @@ export class ConfigModule {
 
 지금까지 만든 동적 모듈은 아직 그렇게 흥미롭진 않습니다. 하지만, 아직 원하는 대로 **설정**할 수 있는 기능을 사용하지 않았습니다! 이 기능을 이제부터 알아볼 겁니다.
 
+### 모듈 설정
+
+`ConfigModule`의 동작을 커스터마이징 하는 명확한 방법은, 위에서 예상했듯이 `options` 객체를 `register()` 정적 메서드에 넘겨주는 것입니다. 동적 모듈을 사용하는 곳에 있는 `imports` 프로퍼티를 다시 봅시다.
+
+```typescript
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { ConfigModule } from './config/config.module';
+
+@Module({
+  imports: [ConfigModule.register({ folder: './config' })],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+동적 모듈로 `options` 객체를 잘 전달하고 있습니다. 그렇다면, `ConfigModule` 안에서는 어떻게 `options` 객체를 사용할 수 있을까요? 잠시 생각해봅시다. `ConfigModule`은 기본적으로 다른 프로바이더에서 사용될 `ConfigService`라는 주입 가능한 서비스를 제공하고 내보내는 호스트 모듈이라는 걸 알고 있습니다. 즉, 실제로 `options` 객체를 통해 동작을 커스터마이징 해야하는 곳은 `ConfigService`라는 것입니다. 잠시 동안만, 우리가 `register()` 메서드로 넘어온 `options` 객체를 `ConfigService` 안에서 쓸 수 있는 방법을 안다고 가정해봅시다. 이 가정 하에서는, `options` 객체의 프로퍼티를 기반으로 서비스를 커스터마이징 하기 위해 몇몇 부분을 수정할 수 있습니다. (**참고**: 아직 `options` 객체를 실제로는 어떻게 넘겨주는 지를 알지 못하기 때문에, 당분간은 `options` 객체를 하드코딩 해둘 겁니다. 조금 있다 고칠거에요!)
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import { EnvConfig } from './interfaces';
+
+@Injectable()
+export class ConfigService {
+  private readonly envConfig: EnvConfig;
+
+  constructor() {
+    const options = { folder: './config' };
+
+    const filePath = `${process.env.NODE_ENV || 'development'}.env`;
+    const envFile = path.resolve(__dirname, '../../', options.folder, filePath);
+    this.envConfig = dotenv.parse(fs.readFileSync(envFile));
+  }
+
+  get(key: string): string {
+    return this.envConfig[key];
+  }
+}
+```
+
+이제 `ConfigService`는 `options`에 정의된 폴더 안에 있는 `.env` 파일을 찾을 수 있습니다.
+
+이제 남은 과제는, 어떻게든 `register()` 메서드로 받은 `options` 객체를 `ConfigService` 안으로 주입하는 것입니다. 그리고 당연하게도, 이걸 위해 *의존성 주입*을 사용할 겁니다. 이 부분이 핵심이기 때문에, 이걸 이해하셔야 합니다. `ConfigModule`은 `ConfigService`를 제공합니다. `ConfigService`는 런타임에만 제공되는 객체인 `options`에 의존합니다. 즉, 런타임에 `options` 객체를 Nest IoC 컨테이너에 연결해서 Nest가 해당 값을 `ConfigService`에 주입할 수 있도록 해야합니다. **커스텀 프로바이더** 챕터에서, 서비스 뿐만 아니라 [어떤 값이든](https://docs.nestjs.com/fundamentals/custom-providers#non-service-based-providers) 프로바이더가 될 수 있다는 사실을 기억하시나요? 즉, 간단한 `options` 객체를 처리할 때도 의존성 주입을 사용할 수 있다는 뜻입니다.
+
+먼저 IoC 컨테이너에 `options` 객체를 연결하는 방법을 살펴보도록 하겠습니다. 이건 `register()` 정적 메서드 안에서 할 거에요. 우리는 지금 모듈을 동적으로 만들어내고 있고, 모듈의 프로퍼티 중 하나에는 프로바이더들의 리스트가 있다는 걸 기억하시나요? 즉, 해당 리스트에 `options` 객체를 프로바이더로써 정의하면 됩니다. 이를 통해 `options` 객체를 `ConfigService` 속으로 주입 가능하게 만들어주며, 다음 단계에서 이를 활용할 수 있게 됩니다. 아래의 코드에서, `providers` 배열을 자세히 봐주세요.
+
+```typescript
+import { DynamicModule, Module } from '@nestjs/common';
+import { ConfigService } from './config.service';
+
+@Module({})
+export class ConfigModule {
+  static register(options: Record<string, any>): DynamicModule {
+    return {
+      module: ConfigModule,
+      providers: [
+        {
+          provide: 'CONFIG_OPTIONS',
+          useValue: options,
+        },
+        ConfigService,
+      ],
+      exports: [ConfigService],
+    };
+  }
+}
+```
+
+이제 `CONFIG_OPTIONS` 프로바이더를 `ConfigService` 안으로 주입하면, 끝입니다! 클래스가 아닌 토큰으로 정의된 프로바이더는 [여기 나와있듯이](https://docs.nestjs.com/fundamentals/custom-providers#non-class-based-provider-tokens), 주입하려면 `@Inject()` 데코레이터를 사용해야 합니다.
+
+```typescript
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import { Injectable, Inject } from '@nestjs/common';
+import { EnvConfig } from './interfaces';
+
+@Injectable()
+export class ConfigService {
+  private readonly envConfig: EnvConfig;
+
+  constructor(@Inject('CONFIG_OPTIONS') private options: Record<string, any>) {
+    const filePath = `${process.env.NODE_ENV || 'development'}.env`;
+    const envFile = path.resolve(__dirname, '../../', options.folder, filePath);
+    this.envConfig = dotenv.parse(fs.readFileSync(envFile));
+  }
+
+  get(key: string): string {
+    return this.envConfig[key];
+  }
+}
+```
+
+마지막으로, 위에서는 간단하게 하기 위해 문자열 기반 토큰(`'CONFIG_OPTIONS'`)을 바로 썼지만, 다른 파일에 상수나 `Symbol`로 정의해놓고, 해당 파일을 가져오는 것이 가장 좋은 방법입니다.
+
+```typescript
+export const CONFIG_OPTIONS = 'CONFIG_OPTIONS';
+```
+
+### 예시
+
+이 챕터의 전체 예제 코드는 [여기](https://github.com/nestjs/nest/tree/master/sample/25-dynamic-modules)를 참고해주세요.
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
