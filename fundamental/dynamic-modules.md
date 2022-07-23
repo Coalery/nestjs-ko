@@ -414,6 +414,57 @@ export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN } =
 export class AppModule {}
 ```
 
+### 추가 옵션들
+
+모듈이 `MODULE_OPTIONS_TOKEN` 프로바이더에 포함되면 안되는, 다른 추가적인 옵션을 동시에 받아야 하는 엣지 케이스가 있을 수도 있습니다. 이에 대한 좋은 예시가 바로 `isGlobal`(`global`) 값이죠. 이런 값들은 모듈 안에 등록된 서비스나 프로바이더와는 무관합니다. 예를 들면 `ConfigService`에서는 호스트 모듈이 전역 모듈로 등록되었는지 아닌지 굳이 알 필요가 없는거죠.
+
+이러한 경우에는, `ConfigurableModuleBuilder#setExtras` 메서드를 사용할 수 있습니다. 아래 예시를 봅시다.
+
+```typescript
+export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN } =
+  new ConfigurableModuleBuilder<ConfigModuleOptions>()
+    .setExtras(
+      {
+        isGlobal: true,
+      },
+      (definition, extras) => ({
+        ...definition,
+        global: extras.isGlobal,
+      }),
+    )
+    .build();
+```
+
+위의 예시에서는, `setExtras` 메서드에 넘긴 첫 번째 인수는 "추가적인" 프로퍼티들에 대한 기본 값을 갖고 있는 객체입니다. 두 번째 인수는 자동으로 생성된 모듈 정의인 `definition` 객체와, 추가적인 프로퍼티들을 나타내는 `extras` 객체를 받는 함수입니다. `definition` 객체는 `provider`나 `exports` 등을 포함하며, `extras` 객체는 해당 모듈을 사용하는 곳에서 명시한 값 혹은 기본값을 가지고 있습니다. 함수의 반환값은 수정될 모듈의 정의입니다. 위의 예시에서는 `extras.isGlobal` 프로퍼티를 가져와서 모듈 정의에 `global` 프로퍼티로 할당했습니다. 이를 통해 해당 모듈이 전역 모듈인지를 설정할 수 있습니다. 이에 대해서는 [여기](https://docs.nestjs.com/modules#dynamic-modules)를 참고해주세요.
+
+이제 이 모듈을 사용할 때, `isGlobal` 플래그 값도 추가적으로 넘길 수 있습니다.
+
+```typescript
+@Module({
+  imports: [
+    ConfigModule.register({
+      isGlobal: true,
+      folder: './config',
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+그러나, `isGlobal`은 "추가적인" 프로퍼티로 선언되었기 때문에, `MODULE_OPTIONS_TOKEN` 프로바이더에서는 해당 값을 찾을 수 없습니다.
+
+```typescript
+@Injectable()
+export class ConfigService {
+  constructor(
+    @Inject(MODULE_OPTIONS_TOKEN) private options: ConfigModuleOptions,
+  ) {
+    // "options" object will not have the "isGlobal" property
+    // ...
+  }
+}
+```
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
