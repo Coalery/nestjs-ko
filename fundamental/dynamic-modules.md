@@ -348,6 +348,36 @@ export class ConfigService {
 }
 ```
 
+### 커스텀 메서드 키
+
+`ConfigurableModuleClass`는 기본적으로 `register` 메서드와 `registerAsync` 메서드를 제공합니다. 다른 메서드 이름을 사용하려면, `ConfigurableModuleBuilder#setClassMethodName` 메서드를 아래와 같이 사용하면 됩니다.
+
+```typescript
+// config.module-definition.ts
+export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN } =
+  new ConfigurableModuleBuilder<ConfigModuleOptions>().setClassMethodName('forRoot').build();
+```
+
+이를 통해 `ConfigurableModuleBuilder`가 `forRoot`와 `forRootAsync` 메서드를 노출하는 클래스를 만들어내도록 할 수 있습니다.
+
+```typescript
+@Module({
+  imports: [
+    ConfigModule.forRoot({ folder: './config' }), // <-- note the use of "forRoot" instead of "register"
+    // or alternatively:
+    // ConfigModule.forRootAsync({
+    //   useFactory: () => {
+    //     return {
+    //       folder: './config',
+    //     }
+    //   },
+    //   inject: [...any extra dependencies...]
+    // }),
+  ],
+})
+export class AppModule {}
+```
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
