@@ -148,6 +148,90 @@ export class AppService {
 >
 > 위에서 지나치게 위협적이긴 했지만, `REQUEST` 스코프 프로바이더를 사용하더라도 잘 디자인된 어플리케이션은 최대 5% 정도로만 느려집니다.
 
+### Durable 프로바이더
+
+위 섹션에서 언급했듯이, `REQUEST` 스코프 프로바이더는 최소 한 개라도 컨트롤러나 다른 프로바이더에 주입되면 해당 컨트롤러도 `REQUEST` 스코프가 되기 때문에, 지연 시간(latency)의 증가로 이어질 수 있습니다. 이는 각각의 요청에 독립적으로 다시 생성된다는 걸 뜻합니다. 즉, 병렬적으로 3만개의 요청이 들어온다고 하면, 3만개의 컨트롤러 인스턴스와 `REQUEST` 스코프 프로바이더의 인스턴스가 존재하게 됩니다.
+
+데이터베이스 연결이나 로깅 서비스 같이 대부분의 프로바이더가 의존하는 공통 프로바이더가 있다면, 거의 모든 프로바이더가 자동으로 `REQUEST` 스코프 프로바이더가 될 겁니다. 이는 **멀티 테넌트 어플리케이션**, 특히 요청 객체에서 헤더나 토큰 정보를 가져와, 이를 기반으로 관련 데이터베이스 연결이나 스키마를 가져오는 중앙 `REQUEST` 스코프의 데이터 소스 프로바이더를 가진 경우에 문제가 될 수 있습니다.
+
+예를 들어, 다른 10명의 고객들이 번갈아 사용하는 어플리케이션을 갖고 있다고 생각해봅시다. 각각의 고객은 자신의 전용 데이터 소스를 갖고 있고, 고객 A가 절대 고객 B의 데이터베이스에 접근할 수 없도록 하고 싶습니다. 이를 해결하기 위한 한 방법은, 요청 객체를 기반으로 "현재 고객"이 누구인지를 결정하여 알맞은 데이터베이스를 주는 `REQUEST` 스코프 "데이터 소스" 프로바이더를 선언하는 것입니다. 이를 통해, 어플리케이션을 단 몇 분만에 멀티 테넌트 어플리케이션으로 만들 수 있습니다. 하지만 해당 방법의 큰 단점은, 아마 어플리케이션 구성 요소들의 큰 부분이 "데이터 소스" 프로바이더에 의존하고 있기 때문에, 대부분의 컨트롤러나 프로바이더가 암묵적으로 `REQUEST` 스코프로 바뀝니다. 이들이 앱 성능에 영향을 미친다는 것은 뻔하죠.
+
+하지만 더 나은 해결책이 있다면 어떨까요? 고객이 10명 밖에 없으니, 요청별로 각 트리를 새로 만드는 것 대신에, 10개의 각 고객의 개인 [DI 서브 트리](https://docs.nestjs.com/fundamentals/module-ref#resolving-scoped-providers)를 사용할 수는 없을까요? 프로바이더가 연속적인 각 요청에 대해 요청 UUID처럼 고유한 프로퍼티에 의존하지 않고, 대신에 각 요청들을 묶을(분류할) 수 있도록 하는 어떤 특정 속성이 있다면, 굳이 모든 들어오는 요청에 대해 _DI 서브 트리를 다시 만들_ 이유가 없습니다.
+
+그리고, 정확히 이 때 **Durable 프로바이더**를 사용하면 됩니다.
+
+프로바이더를 durable하게 설정하기 전에, 먼저 요청을 관련 DI 서브 트리에 연결시켜주기 위해, 요청들을 묶는 로직을 제공하여 "공통 요청 속성"이 무엇인지를 Nest에게 알려주는 **전략(strategy)** 을 등록해야 합니다.
+
+```typescript
+import {
+  HostComponentInfo,
+  ContextId,
+  ContextIdFactory,
+  ContextIdStrategy,
+} from "@nestjs/core";
+import { Request } from "express";
+
+const tenants = new Map<string, ContextId>();
+
+export class AggregateByTenantContextIdStrategy implements ContextIdStrategy {
+  attach(contextId: ContextId, request: Request) {
+    const tenantId = request.headers["x-tenant-id"] as string;
+    let tenantSubTreeId: ContextId;
+
+    if (tenants.has(tenantId)) {
+      tenantSubTreeId = tenants.get(tenantId);
+    } else {
+      tenantSubTreeId = ContextIdFactory.create();
+      tenants.set(tenantId, tenantSubTreeId);
+    }
+
+    // If tree is not durable, return the original "contextId" object
+    return (info: HostComponentInfo) =>
+      info.isTreeDurable ? tenantSubTreeId : contextId;
+  }
+}
+```
+
+> **팁**
+>
+> `REQUEST` 스코프와 비슷하게, durability도 주입 체인에 퍼집니다. 이는 A가 `durable`로 설정된 B에 의존하고, A에 명시적으로 `durable`이 `false`로 설정되어 있지 않다면 A도 암묵적으로 durable해진다는 뜻입니다.
+
+> **주의**
+>
+> 해당 전략은 큰 규모의 테넌트를 관리하는 어플리케이션에는 적합하지 않습니다.
+
+`main.ts` 파일 같은 곳에 아래의 코드를 두어 전략을 등록할 수 있습니다. 어디에 두던 전역적으로 적용됩니다.
+
+```typescript
+ContextIdFactory.apply(new AggregateByTenantContextIdStrategy());
+```
+
+> **팁**
+>
+> `ContextIdFactory` 클래스는 `@nestjs/core` 패키지에서 가져올 수 있습니다.
+
+요청이 어플리케이션에 도달하기 전에 등록이 이루어지면, 모든 게 의도한 대로 작동할 겁니다.
+
+마지막으로, 프로바이더를 durable 프로바이더로 바꾸려면 `durable` 플래그에 `true`를 주기만 하면 됩니다.
+
+```typescript
+import { Injectable, Scope } from "@nestjs/common";
+
+@Injectable({ scope: Scope.REQUEST, durable: true })
+export class CatsService {}
+```
+
+비슷하게 [커스텀 프로바이더](https://docs.nestjs.com/fundamentals/custom-providers)의 경우, `durable` 프로퍼티를 사용하면 됩니다.
+
+```typescript
+{
+  provide: 'CONNECTION_POOL',
+  useFactory: () => { ... },
+  scope: Scope.REQUEST,
+  durable: true,
+}
+```
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
