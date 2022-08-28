@@ -2,23 +2,25 @@
 
 ## INTRODUCTION
 
-* [Introduction](introduction/introduction.md)
+- [Introduction](introduction/introduction.md)
 
 ## OVERVIEW
 
-* [First steps](overview/first-steps.md)
-* [Controllers](overview/controllers.md)
-* [Providers](overview/providers.md)
-* [Modules](overview/modules.md)
-* [Middleware](overview/middleware.md)
-* [Exception filters](overview/exception-filters.md)
-* [Pipes](overview/pipes.md)
-* [Guards](overview/guards.md)
-* [Interceptors](overview/interceptors.md)
-* [Custom decorators](overview/custom-decorators.md)
+- [First steps](overview/first-steps.md)
+- [Controllers](overview/controllers.md)
+- [Providers](overview/providers.md)
+- [Modules](overview/modules.md)
+- [Middleware](overview/middleware.md)
+- [Exception filters](overview/exception-filters.md)
+- [Pipes](overview/pipes.md)
+- [Guards](overview/guards.md)
+- [Interceptors](overview/interceptors.md)
+- [Custom decorators](overview/custom-decorators.md)
 
 ## FUNDAMENTALS
 
-* [Custom providers](fundamental/custom-providers.md)
-* [Asynchronous providers](fundamental/asynchronous-providers.md)
-* [Dynamic modules](fundamental/dynamic-modules.md)
+- [Custom providers](fundamental/custom-providers.md)
+- [Asynchronous providers](fundamental/asynchronous-providers.md)
+- [Dynamic modules](fundamental/dynamic-modules.md)
+- [Injection scopes](fundamental/injection-scopes.md)
+- [Circular Dependency](fundamental/circular-dependency.md)
