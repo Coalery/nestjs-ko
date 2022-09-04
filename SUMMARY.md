@@ -23,4 +23,5 @@
 - [Asynchronous providers](fundamental/asynchronous-providers.md)
 - [Dynamic modules](fundamental/dynamic-modules.md)
 - [Injection scopes](fundamental/injection-scopes.md)
-- [Circular Dependency](fundamental/circular-dependency.md)
+- [Circular dependency](fundamental/circular-dependency.md)
+- [Module reference](fundamental/module-reference.md)
