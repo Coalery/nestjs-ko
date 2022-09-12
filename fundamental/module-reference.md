@@ -43,6 +43,64 @@ export class CatsService implements OnModuleInit {
 this.moduleRef.get(Service, { strict: false });
 ```
 
+### 스코프를 갖는 프로바이더 만들기
+
+스코프(Transient, request-scoped)를 갖는 프로바이더를 동적으로 만들려면, `resolve()` 메서드의 인수로 해당 프로바이더의 주입 토큰을 넘겨주면 됩니다.
+
+```typescript
+// cats.service.ts
+@Injectable()
+export class CatsService implements OnModuleInit {
+  private transientService: TransientService;
+  constructor(private moduleRef: ModuleRef) {}
+
+  async onModuleInit() {
+    this.transientService = await this.moduleRef.resolve(TransientService);
+  }
+}
+```
+
+`resolve()` 메서드는 자신의 **DI 컨테이너 서브트리**로부터, 해당 프로바이더의 유일한 인스턴스를 반환합니다. 각 서브트리는 유일한 컨텍스트 식별자를 갖습니다. 따라서, 만약 `resolve()` 메서드를 한 번 이상 호출한 뒤에 각 인스턴스 레퍼런스를 비교해보면, 모두 다른 레퍼런스를 갖는다는 걸 알 수 있습니다.
+
+```typescript
+// cats.service.ts
+@Injectable()
+export class CatsService implements OnModuleInit {
+  constructor(private moduleRef: ModuleRef) {}
+
+  async onModuleInit() {
+    const transientServices = await Promise.all([
+      this.moduleRef.resolve(TransientService),
+      this.moduleRef.resolve(TransientService),
+    ]);
+    console.log(transientServices[0] === transientServices[1]); // false
+  }
+}
+```
+
+`resolve()` 메서드를 여러번 호출해도 같은 인스턴스를 생성하며, 각각의 호출이 같은 DI 컨테이너 서브트리를 공유하는 걸 보장하게 하고 싶다면, `resolve()` 메서드에 컨텍스트 식별자를 넘겨주면 됩니다. 새로운 컨텍스트 식별자를 생성하려면, `ContextIdFactory` 클래스를 사용하면 됩니다. 해당 클래스는 적절한 유일 식별자를 반환하는 `create()` 메서드를 제공합니다.
+
+```typescript
+// cats.service.ts
+@Injectable()
+export class CatsService implements OnModuleInit {
+  constructor(private moduleRef: ModuleRef) {}
+
+  async onModuleInit() {
+    const contextId = ContextIdFactory.create();
+    const transientServices = await Promise.all([
+      this.moduleRef.resolve(TransientService, contextId),
+      this.moduleRef.resolve(TransientService, contextId),
+    ]);
+    console.log(transientServices[0] === transientServices[1]); // true
+  }
+}
+```
+
+> **팁**
+>
+> `ContextIdFactory` 클래스는 `@nestjs/core` 패키지에서 가져올 수 있습니다.
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
