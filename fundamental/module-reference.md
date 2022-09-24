@@ -101,6 +101,59 @@ export class CatsService implements OnModuleInit {
 >
 > `ContextIdFactory` 클래스는 `@nestjs/core` 패키지에서 가져올 수 있습니다.
 
+### `REQUEST` 프로바이더 등록하기
+
+`ContextIdFactory.create()`를 사용해서 수동으로 만들어진 컨텍스트 식별자의 DI 서브트리에서, `REQUEST` 프로바이더는 `undefined`이 됩니다. `REQUEST` 프로바이더가 인스턴스화 되지 않고, Nest의 의존성 주입 시스템에 의해 관리되지 않기 때문인데요.
+
+수동으로 만들어진 DI 서브 트리에 커스텀 `REQUEST` 객체를 등록하려면, 아래와 같이 `ModuleRef#registerRequestByContextId()` 메서드를 사용하면 됩니다.
+
+```typescript
+const contextId = ContextIdFactory.create();
+this.moduleRef.registerRequestByContextId(/* YOUR_REQUEST_OBJECT */, contextId);
+```
+
+### 현재 서브 트리 가져오기
+
+가끔, **요청 컨텍스트**에서 `REQUEST` 스코프를 갖는 프로바이더의 인스턴스를 만들고 싶을 때가 있을 겁니다. 예를 들면, `CatsService`가 `REQUEST` 스코르를 갖고, 여기에다가 `REQUEST` 스코프의 `CatsRepository` 인스턴스를 만들어내야 한다고 생각해봅시다. 같은 DI 컨테이너 서브 트리를 공유하려면, 새로운 컨텍스트 식별자를 만들지 않고, 현재의 컨텍스트 식별자를 가져와야 합니다. 현재 컨텍스트 식별자를 얻으려면, `@Inject()` 데코레이터를 사용해서 요청 객체를 주입 받으면 됩니다.
+
+```typescript
+// cats.service.ts
+@Injectable()
+export class CatsService {
+  constructor(@Inject(REQUEST) private request: Record<string, unknown>) {}
+}
+```
+
+> **팁**
+>
+> `REQUEST` 프로바이더에 대해서 더 알아보려면 [여기](https://docs.nestjs.com/fundamentals/injection-scopes#request-provider)를 참고해주세요.
+
+이제, `ContextIdFactory` 클래스의 `getByRequest()` 메서드를 사용해서 요청 객체 기반의 컨텍스트 식별자를 생성하고, `resolve()`에 인수로 넣어주면 됩니다.
+
+```typescript
+const contextId = ContextIdFactory.getByRequest(this.request);
+const catsRepository = await this.moduleRef.resolve(CatsRepository, contextId);
+```
+
+### 동적으로 커스텀 클래스 인스턴스화하기
+
+**이전에 프로바이더로 등록되지 않은** 클래스를 동적으로 인스턴스화 하려면, 모듈 레퍼런스의 `create()` 메서드를 사용하면 됩니다.
+
+```typescript
+// cats.service.ts
+@Injectable()
+export class CatsService implements OnModuleInit {
+  private catsFactory: CatsFactory;
+  constructor(private moduleRef: ModuleRef) {}
+
+  async onModuleInit() {
+    this.catsFactory = await this.moduleRef.create(CatsFactory);
+  }
+}
+```
+
+이 기술은 프레임워크 컨테이너 밖에서 조건적으로 다른 클래스를 인스턴스화할 수 있게 해줍니다.
+
 ### 문서 기여자
 
 - [러리](https://github.com/Coalery)
