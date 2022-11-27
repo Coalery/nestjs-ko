@@ -25,3 +25,4 @@
 - [Injection scopes](fundamental/injection-scopes.md)
 - [Circular dependency](fundamental/circular-dependency.md)
 - [Module reference](fundamental/module-reference.md)
+- [Lazy-loading modules](fundamental/lazy-loading-modules.md)
