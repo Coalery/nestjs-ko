@@ -2,7 +2,7 @@
 
 원문 : [https://docs.nestjs.com/fundamentals/lazy-loading-modules](https://docs.nestjs.com/fundamentals/lazy-loading-modules)
 
-이하 Lazy-loading은 지연 로딩이라고 지칭합니다.
+이하 Lazy-loading은 지연 로딩이라고 번역합니다.
 
 일반적으로, 모듈들은 열심히 로딩됩니다. 어플리케이션이 로드되자마자 모든 모듈들이 즉시 필요하던 말던 모두 로딩된다는 뜻입니다. 대부분의 어플리케이션에선 이러한 작동 방식에 문제가 없으나, 시작할 때 발생하는 레이턴시, 즉 "콜드 스타트"가 큰 문제가 되는 **서버리스 환경**에서 동작하는 앱이나 워커들은 이 부분이 병목 지점이 될 수 있습니다.
 
@@ -103,6 +103,24 @@ const lazyService = moduleRef.get(LazyService);
 > ```
 >
 > 위와 같이 옵션을 설정해주면, [Code Splitting](https://webpack.js.org/guides/code-splitting/) 기능을 사용할 수 있습니다.
+
+### 지연 로딩되는 컨트롤러, 게이트웨이, 리졸버(Resolver)
+
+컨트롤러나 GraphQL 어플리케이션의 리졸버들은 Nest 내에서 라우트, 경로, 토픽, 쿼리, 뮤테이션의 집합을 나타내므로, 이들은 `LazyModuleLoader` 클래스를 사용하여 **지연 로딩 할 수 없습니다**.
+
+> **주의**
+>
+> 지연 로딩되는 모듈에 등록된 컨트롤러, [리졸버](https://docs.nestjs.com/graphql/resolvers), [게이트웨이](https://docs.nestjs.com/websockets/gateways)들은 예상대로 작동하지는 않습니다. 비슷하게, `MiddlewareConsumer` 인터페이스를 구현한 미들웨어 함수는 온디맨드(on-demand)로 등록할 수 없습니다.
+
+예를 들어, `@nestjs/platform-fastify` 패키지를 사용하여 Fastify 드라이버를 사용하는 REST API(HTTP 어플리케이션)를 구축한다고 가정해봅시다. Fastify는 어플리케이션이 준비되거나 성공적으로 메세지를 받고 있을 때 다른 라우트를 등록하게 해주지 않습니다. 즉, 모듈의 컨트롤러에 등록된 라우트를 Nest가 인식한다고 해도, 런타임 때 이들을 등록할 방법이 존재하지 않기 때문에, 지연 로딩된 라우트들에 접근할 수 없게 됩니다.
+
+마찬가지로, Kafka, gRPC, RabbitMQ 등 `@nestjs/microservices` 패키지에서 제공하는 전송 전략들도 연결을 시작하기 전에 특정 토픽이나 채널을 구독(subscribe)하거나 요청을 받도록 설정되어야 합니다.
+
+마지막으로, `@nestjs/graphql` 패키지는 메타데이터를 기반으로 즉석에서 GraphQL 스키마를 만들어내기 때문에, 모든 클래스들이 그 전에 로딩되어야 합니다. 그렇지 않으면, 적절하고 유효한 스키마를 만들어낼 수 없습니다.
+
+### 일반적인 사용 예
+
+일반적으로, 지연 로딩 모듈은 워커, 크론, 람다 및 서버리스 함수, 웹훅이 라우트 경로, 날짜, 쿼리 값 등 입력 값에 따라 다른 서비스를 실행해야 할 경우 많이 사용합니다. 반면, 실행 시작 시간이 크게 상관 없는 모놀리식 어플리케이션에서는 그다지 사용하지 않습니다.
 
 ### 문서 기여자
 
