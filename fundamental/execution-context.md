@@ -31,3 +31,74 @@ if (host.getType() === "http") {
 > `GqlContextType`은 `@nestjs/graphql` 패키지에서 가져올 수 있습니다.
 
 어플리케이션의 유형을 가져올 수 있으면, 이제 아래와 같이 더 일반적인 컴포넌트들을 만들 수 있습니다.
+
+### 호스트 핸들러의 인수
+
+핸들러에 전달될 인수들의 배열을 가져오는 한 방법은, `host` 객체의 `getArgs()` 메서드를 사용하는 것인데요.
+
+```typescript
+const [req, res, next] = host.getArgs();
+```
+
+`getArgByIndex()` 메서드를 이용하여, 인덱스를 통해 특정 인수를 뽑아올 수도 있습니다.
+
+```typescript
+const request = host.getArgByIndex(0);
+const response = host.getArgByIndex(1);
+```
+
+위의 예시와 같이 인덱스를 통해 요청 객체와 응답 객체를 가져오는 것은, 특정 실행 컨텍스트에 어플리케이션이 종속(couple)될 수 있으므로, 일반적으로 추천하지는 않습니다. 대신에, 어플리케이션에 적절한 실행 컨텍스트로 바꿔주는 `host` 객체의 유틸리티 메서드를 사용하여 코드를 더욱 탄탄하고 재사용 가능하게 만들 수 있습니다. 컨텍스트 변경 유틸리티 메서드는 아래와 같습니다.
+
+```typescript
+/**
+ * Switch context to RPC.
+ */
+switchToRpc(): RpcArgumentsHost;
+/**
+ * Switch context to HTTP.
+ */
+switchToHttp(): HttpArgumentsHost;
+/**
+ * Switch context to WebSockets.
+ */
+switchToWs(): WsArgumentsHost;
+```
+
+이전의 예시를 `switchToHttp()` 메서드를 사용하여 다시 써봅시다. `host.switchToHttp()`를 호출하면, HTTP 어플리케이션 컨텍스트에 맞는 `HttpArgumentsHost` 객체를 반환합니다. `HttpArgumentsHost` 객체는 원하는 객체를 가져오기 위하여 두 개의 유용한 메서드를 갖고 있습니다. 이 경우에는 네이티브 Express 타이핑이 된 객체를 반환하기 위해 Express 타입 단언(type assertion)을 사용합니다.
+
+```typescript
+const ctx = host.switchToHttp();
+const request = ctx.getRequest<Request>();
+const response = ctx.getResponse<Response>();
+```
+
+`WsArgumentsHost`와 `RpcArgumentsHost`도 마찬가지로 마이크로서비스와 웹소켓 컨텍스트 각각의 알맞은 객체를 반환하는 메서드를 갖고 있습니다. 아래는 `WsArgumentsHost`의 메서드입니다.
+
+```typescript
+export interface WsArgumentsHost {
+  /**
+   * Returns the data object.
+   */
+  getData<T>(): T;
+  /**
+   * Returns the client object.
+   */
+  getClient<T>(): T;
+}
+```
+
+아래는 `RpcArgumentsHost`의 메서드입니다.
+
+```typescript
+export interface RpcArgumentsHost {
+  /**
+   * Returns the data object.
+   */
+  getData<T>(): T;
+
+  /**
+   * Returns the context object.
+   */
+  getContext<T>(): T;
+}
+```
