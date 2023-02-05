@@ -102,3 +102,149 @@ export interface RpcArgumentsHost {
   getContext<T>(): T;
 }
 ```
+
+### ExecutionContext 클래스
+
+`ExecutionContext`는 현재 실행 과정에 대한 추가적인 정보를 제공해주는 `ArgumentsHost`를 상속 받습니다. `ArgumentsHost`처럼, Nest는 가드의 `canActivate()` 메서드나 인터셉터의 `intercept()` 메서드처럼 `ExecutionContext` 인스턴스가 필요한 곳에 제공해줍니다. 해당 클래스는 아래의 메서드를 제공하는데요.
+
+```typescript
+export interface ExecutionContext extends ArgumentsHost {
+  /**
+   * 현재 핸들러가 속한 컨트롤러 클래스의 타입을 반환합니다.
+   */
+  getClass<T>(): Type<T>;
+  /**
+   * 요청 파이프라인에서 다음에 호출될 핸들러 메서드의 레퍼런스를 반환합니다.
+   */
+  getHandler(): Function;
+}
+```
+
+`getHandler()` 메서드는 호출될 핸들러에 대한 레퍼런스를 반환합니다. `getClass()` 메서드는 해당 핸들러가 속한 `Controller` 클래스의 타입을 반환합니다. 예를 들어 HTTP 컨텍스트에서는, 만약 현재 처리되는 요청이 `POST` 요청이며 이것이 `CatsController`의 `create()` 메서드(핸들러)에 대응된다고 했을 때, `getHandler()`는 `create()` 메서드의 레퍼런스를 반환하고, `getClass()`는 `CatsController`의 **타입**(인스턴스가 아님!)을 반환합니다.
+
+```typescript
+const methodKey = ctx.getHandler().name; // "create"
+const className = ctx.getClass().name; // "CatsController"
+```
+
+현재 클래스와 핸들러 메서드의 레퍼런스에 접근할 수 있다는 것은 굉장한 유연성을 제공합니다. 가장 중요한 것은, 가드나 인터셉터에서 `@SetMetadata()` 데코레이터를 통해 설정된 메타데이터에 접근할 기회를 준다는 것입니다. 이 부분은 아래에서 더 다루겠습니다.
+
+### Reflection과 메타데이터
+
+Nest는 `@SetMetadata()` 데코레이터를 통해 라우트 핸들러에 **커스텀 메타데이터**를 달아주는 기능을 제공합니다. 이를 활용하여, 이 메타데이터에 접근하여 특정한 결정을 내릴 수 있습니다.
+
+```typescript
+// cats.controller.ts
+@Post()
+@SetMetadata('roles', ['admin'])
+async create(@Body() createCatDto: CreateCatDto) {
+  this.catsService.create(createCatDto);
+}
+```
+
+> **팁**
+>
+> `@SetMetadata()` 데코레이터는 `@nestjs/common` 패키지에서 가져올 수 있습니다.
+
+위와 같이 하면, `create()` 메서드에 `roles`라는 메타데이터를 붙여줄 수 있습니다. 이때, `roles`는 메타데이터의 키이며, `['admin']`은 값입니다. 이렇게 해도 동작하기는 하지만, 핸들러에 직접적으로 `@SetMetadata()`를 사용하는 것은 좋은 방법은 아닙니다. 대신, 아래와 같이 데코레이터를 따로 만드는 것이 좋습니다.
+
+```typescript
+// roles.decorator.ts
+import { SetMetadata } from "@nestjs/common";
+
+export const Roles = (...roles: string[]) => SetMetadata("roles", roles);
+```
+
+이 방법은 더 깔끔하고, 읽기 쉬우며, 강하게 타이핑되어 있습니다. 이제 `@Roles()` 데코레이터를 `create()` 메서드에 달아봅시다.
+
+```typescript
+// cats.controller.ts
+@Post()
+@Roles('admin')
+async create(@Body() createCatDto: CreateCatDto) {
+  this.catsService.create(createCatDto);
+}
+```
+
+라우트의 메타데이터인 역할(`roles`)에 접근하기 위해, `Reflector` 헬퍼 클래스를 사용할 것입니다. `Reflector` 클래스는 프레임워크에서 기본적으로 제공되며, `@nestjs/core` 패키지에서 가져올 수 있습니다. `Reflector`는 일반적인 방법으로 클래스에 주입해줄 수 있습니다.
+
+```typescript
+// roles.guard.ts
+@Injectable()
+export class RolesGuard {
+  constructor(private reflector: Reflector) {}
+}
+```
+
+> **팁**
+>
+> `Reflector` 클래스는 `@nestjs/core` 패키지에서 가져올 수 있습니다.
+
+이제, `get()` 메서드를 사용하여 핸들러의 메타데이터를 읽어봅시다.
+
+```typescript
+const roles = this.reflector.get<string[]>("roles", context.getHandler());
+```
+
+`Reflector#get` 메서드에 메타데이터의 **키**와 메타데이터를 가져올 **컨텍스트**(데코레이터가 달려있는 핸들러), 두 개의 인수를 넘겨주어 쉽게 메타데이터에 접근할 수 있습니다. 이 예시에서 **키**는 `'roles'`가 됩니다. 컨텍스트의 경우, 현재 처리되는 라우트 핸들러에서 메타데이터를 가져올 수 있도록 `context.getHandler()`를 호출하여 가져옵니다. `getHandler()`는 라우트 핸들러 함수의 **레퍼런스**를 반환한다는 걸 기억해주세요.
+
+대신에, 컨트롤러 수준에서 메타데이터를 적용하여 컨트롤러 클래스 내의 모든 라우트에 메타데이터를 적용할 수 있도록 구성할 수도 있습니다.
+
+```typescript
+// cats.controller.ts
+@Roles("admin")
+@Controller("cats")
+export class CatsController {}
+```
+
+이 경우에는, 컨트롤러 메타데이터를 가져오기 위해 `context.getHandler()` 대신에 `context.getClass()`를 두 번째 인수로 넘겨줍니다.
+
+```typescript
+// roles.gurad.ts
+const roles = this.reflector.get<string[]>("roles", context.getClass());
+```
+
+여러 수준에 메타데이터를 설정한 경우, 메타데이터를 가져와서 합쳐야 할 수도 있는데요. `Reflector` 클래스는 이 경우에 사용되는 두 가지 유틸리티 메서드를 제공합니다. 이들은 컨트롤러와 메서드 메타데이터를 **둘 다** 한 번에 가져와서, 각각 다른 방법으로 합쳐줍니다.
+
+아래와 같이 `'roles'` 메타데이터를 두 수준에서 제공하는 시나리오를 생각해봅시다.
+
+```typescript
+// cats.controller.ts
+@Roles("user")
+@Controller("cats")
+export class CatsController {
+  @Post()
+  @Roles("admin")
+  async create(@Body() createCatDto: CreateCatDto) {
+    this.catsService.create(createCatDto);
+  }
+}
+```
+
+만약 `'user'`을 기본 역할로 명시하고, 특정 메서드에 대하여 선택적으로 덮어쓰고 싶다면 `getAllAndOverride()` 메서드를 사용하면 됩니다.
+
+```typescript
+const roles = this.reflector.getAllAndOverride<string[]>("roles", [
+  context.getHandler(),
+  context.getClass(),
+]);
+```
+
+이와 같은 코드를 가진 가드에서는 위의 메타데이터와 `create()` 메서드 컨텍스트에서 동작한다고 할 때, `roles`는 `['admin']`을 갖게 됩니다.
+
+둘 모두에서 메타데이터를 가져와서 합치고 싶다면, `getAllAndMerge()` 사용하면 됩니다. 해당 메서드는 배열이나 객체 둘 다 합쳐줍니다.
+
+```typescript
+const roles = this.reflector.getAllAndMerge<string[]>("roles", [
+  context.getHandler(),
+  context.getClass(),
+]);
+```
+
+이렇게 하면, `roles`는 `['user', 'admin']`을 갖게 됩니다.
+
+위의 두 메서드 모두 첫 번째 인수로 메타데이터 키를, 두 번째 인수로 `getHandler()`나 `getClass()` 메서드를 호출하여, 메타데이터를 가져올 컨텍스트들의 배열을 넘겨주면 됩니다.
+
+### 문서 기여자
+
+- [러리](https://github.com/Coalery)
